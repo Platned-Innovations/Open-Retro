@@ -59,6 +59,7 @@ The values you need in `.env`:
 
 | Variable | Notes |
 | --- | --- |
+| `APP_NAME` | Shown in the header next to the logo. Defaults to "Agile Retro" if unset |
 | `DATABASE_URL` | An empty database is fine — it will be set up for you. Tested on Postgres 16 and 18 |
 | `AUTH_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | `APP_URL` | `http://localhost:3000` in dev |
@@ -73,6 +74,20 @@ password. To enable it, register an Entra ID app with the **Mail.Send** *applica
 
 Everyone other than the seeded Super Admin has to be **invited**. Use that account to create the
 first company and project, then "Invite" on a project or company page.
+
+## Branding
+
+This is a template repo — forks are expected to relabel it for their own deployment. Two things
+control that:
+
+- **`APP_NAME`** — set it and the header shows your name next to the logo instead of the default
+  "Agile Retro". It only affects the header; page titles, emails and other copy are unaffected.
+- **"Powered by Open Retro"** underneath it is hardcoded, not configurable — it always credits the
+  underlying project, the same way a white-label product still names the platform it's built on.
+
+There is no other per-fork naming to change in the app itself. The project's own internal name
+(`package.json`, the test-database container, CI comments) is `open-retro` — none of it should say
+"RnI" or "R&I" anywhere; if you find an instance, it's a leftover that should be fixed.
 
 ### How the database sets itself up
 
@@ -156,6 +171,7 @@ Two consequences worth knowing:
 
 | Variable | Used for |
 | --- | --- |
+| `APP_NAME` | Display name shown next to the logo in the header. Defaults to "Agile Retro" if unset — see [Branding](#branding) |
 | `DATABASE_URL` | Postgres connection (Prisma) |
 | `AUTH_SECRET` | Session JWT signing/encryption (Auth.js) |
 | `APP_URL` | Absolute links in emails, **and** the base URL Auth.js uses for every sign-in/sign-out redirect (see below) |
@@ -193,11 +209,26 @@ deployment, and `RUN_SCHEDULER` is what makes that reversible when it isn't one.
 ## Deploying to Azure Web App
 
 A single Node process, so it deploys as an ordinary **Azure Web App (Linux, Node 20 LTS)** — no
-separate services needed.
+separate services needed. This is a template repo: fork it and connect *your* fork to *your* Web
+App — `.github/workflows/ci.yml` deploys nothing from the upstream repo itself.
 
-1. **Runtime & startup**
+1. **GitHub Actions secrets** — on your fork, Settings → Secrets and variables → Actions:
+   - `AZURE_WEBAPP_PUBLISH_PROFILE` (secret) — Portal → your Web App → **Overview** → **Get
+     publish profile** downloads a `.PublishSettings` file (XML). Open it in a text editor and
+     paste the entire contents in as the secret's value.
+   - `AZURE_APP_NAME` (variable, not secret) — the Web App's name as shown in the Portal, used to
+     target the right app in the deploy step.
+
+   Newer Web Apps disable basic auth by default, which both the publish-profile download and the
+   workflow's Kudu zip-deploy step depend on: Configuration → General settings → **SCM Basic Auth
+   Publishing Credentials: On**.
+
+   No database credential is needed in GitHub at all — see step 3 and "How the database sets
+   itself up" above.
+
+2. **Runtime & startup**
    - Stack: Node 20 LTS.
-   - Deployment is a zip push from GitHub Actions on every `PROD` push (see
+   - Deployment is a zip push from GitHub Actions on every push to `main` (see
      `.github/workflows/ci.yml`). It ships **source**, so Oryx runs `npm install` (needs full
      `dependencies`, not just prod-only — `tsx`, `dotenv` and `cross-env` are regular dependencies
      for exactly this reason) then `npm run build` on the server. Don't also wire up the Deployment
@@ -205,15 +236,17 @@ separate services needed.
    - Startup command: leave default (`npm start`), which runs
      `cross-env NODE_ENV=production tsx server.ts` and honours the `PORT` App Service injects.
 
-2. **Application settings** — add every row from the table above as an Application Setting. Set
-   `APP_URL` to the real `https://<your-app>.azurewebsites.net` or custom domain.
+3. **Application settings** — add every row from the table above as an Application Setting,
+   **including `AUTO_MIGRATE=true`** (the default — nothing else applies migrations, since the
+   pipeline deliberately doesn't). Set `APP_URL` to the real
+   `https://<your-app>.azurewebsites.net` or custom domain.
 
-3. **Enable WebSockets** — Configuration → General settings → **Web sockets: On**. Without it
+4. **Enable WebSockets** — Configuration → General settings → **Web sockets: On**. Without it
    Socket.IO falls back to polling or fails outright.
 
-4. **Enable Always On** — prevents the app idling out and dropping every open WebSocket.
+5. **Enable Always On** — prevents the app idling out and dropping every open WebSocket.
 
-5. **Database firewall** — allowlist the Web App's outbound traffic on the Postgres server
+6. **Database firewall** — allowlist the Web App's outbound traffic on the Postgres server
    (firewall/security group **and** `pg_hba.conf`, if it also restricts by host — both layers exist
    independently and both need an entry). Two caveats we hit ourselves:
    - A `pg_hba.conf` edit needs a reload (`SELECT pg_reload_conf();`) — it does not take effect
@@ -223,22 +256,19 @@ separate services needed.
      — more robust, and the honest recommendation if this matters for your security posture — put
      the Web App behind Regional VNet Integration with a NAT Gateway for one fixed egress IP.
 
-6. **Migrations and the first admin** are automatic; nothing to run by hand for a first deploy.
+7. **Migrations and the first admin** are automatic; nothing to run by hand for a first deploy, and
+   nothing in GitHub Actions touches the database — the Web App applies its own migrations at
+   startup, driven entirely by `AUTO_MIGRATE` and the `DATABASE_URL` you set in step 3.
 
-   Every push to `PROD` *also* runs `prisma migrate deploy` from GitHub Actions before the deploy
-   step. That is belt-and-braces rather than duplication: a migration that cannot apply fails the
-   pipeline and the old code keeps serving, whereas relying on startup alone would turn the same
-   problem into a crash-looping Web App.
-
-   > **That step applies hand-written migrations to production unattended,** and some are
+   > **That startup step applies hand-written migrations to production unattended,** and some are
    > destructive. Before releasing one you haven't rehearsed against a copy, take a backup with
    > `npx tsx scripts/backup.ts <file>` and check it afterwards with
    > `npx tsx scripts/compare-rows.ts <file>`. `scripts/restore-rows.ts` puts rows back.
    >
-   > Both production jobs declare `environment: production`, so adding a required reviewer under
+   > The `deploy` job declares `environment: production`, so adding a required reviewer under
    > Settings → Environments turns the release into a one-click approval. Worth doing.
 
-7. **Single-instance note** — Socket.IO room broadcasting assumes one Node process. Azure's default
+8. **Single-instance note** — Socket.IO room broadcasting assumes one Node process. Azure's default
    ARR affinity makes this correct even on a multi-instance plan, *as long as you don't rely on
    cross-instance broadcast*. For true fan-out, add the
    [Socket.IO Redis adapter](https://socket.io/docs/v4/redis-adapter/); nothing else changes,
