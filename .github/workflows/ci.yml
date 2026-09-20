@@ -126,9 +126,9 @@ jobs:
       #
       # Pruned rather than shipped whole: `typescript`, `eslint`, `tailwindcss`
       # and `vitest` did their job producing `.next` above and are never
-      # touched again. `prisma`, `next`, `tsx`, `dotenv` and `cross-env` stay —
-      # they're regular `dependencies` because the startup command needs them
-      # at runtime.
+      # touched again. `prisma`, `next`, `tsx` and `dotenv` stay — they're
+      # regular `dependencies` because the startup command needs them at
+      # runtime.
       - name: Prune devDependencies for deployment
         if: github.ref == 'refs/heads/main'
         run: npm prune --omit=dev
