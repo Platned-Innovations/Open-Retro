@@ -59,6 +59,7 @@ The values you need in `.env`:
 
 | Variable | Notes |
 | --- | --- |
+| `APP_NAME` | Shown in the header next to the logo. Defaults to "Agile Retro" if unset |
 | `DATABASE_URL` | An empty database is fine — it will be set up for you. Tested on Postgres 16 and 18 |
 | `AUTH_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | `APP_URL` | `http://localhost:3000` in dev |
@@ -73,6 +74,20 @@ password. To enable it, register an Entra ID app with the **Mail.Send** *applica
 
 Everyone other than the seeded Super Admin has to be **invited**. Use that account to create the
 first company and project, then "Invite" on a project or company page.
+
+## Branding
+
+This is a template repo — forks are expected to relabel it for their own deployment. Two things
+control that:
+
+- **`APP_NAME`** — set it and the header shows your name next to the logo instead of the default
+  "Agile Retro". It only affects the header; page titles, emails and other copy are unaffected.
+- **"Powered by Open Retro"** underneath it is hardcoded, not configurable — it always credits the
+  underlying project, the same way a white-label product still names the platform it's built on.
+
+There is no other per-fork naming to change in the app itself. The project's own internal name
+(`package.json`, the test-database container, CI comments) is `open-retro` — none of it should say
+"RnI" or "R&I" anywhere; if you find an instance, it's a leftover that should be fixed.
 
 ### How the database sets itself up
 
@@ -156,6 +171,7 @@ Two consequences worth knowing:
 
 | Variable | Used for |
 | --- | --- |
+| `APP_NAME` | Display name shown next to the logo in the header. Defaults to "Agile Retro" if unset — see [Branding](#branding) |
 | `DATABASE_URL` | Postgres connection (Prisma) |
 | `AUTH_SECRET` | Session JWT signing/encryption (Auth.js) |
 | `APP_URL` | Absolute links in emails, **and** the base URL Auth.js uses for every sign-in/sign-out redirect (see below) |

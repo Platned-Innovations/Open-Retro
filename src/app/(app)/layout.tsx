@@ -27,14 +27,18 @@ async function MyActionsLink() {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   const user = session?.user;
+  const appName = process.env.APP_NAME ?? "Agile Retro";
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-default bg-default">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link href="/" className="flex items-center gap-2 text-body font-semibold text-default">
-            <Image src="/logo.png" alt="Agile Retro" width={28} height={28} />
-            Agile Retro
+          <Link href="/" className="flex items-center gap-2 text-default">
+            <Image src="/logo.png" alt={appName} width={28} height={28} />
+            <span className="flex flex-col leading-tight">
+              <span className="text-body font-semibold">{appName}</span>
+              <span className="text-body-sm text-default-secondary">Powered by Open Retro</span>
+            </span>
           </Link>
 
           <nav className="flex items-center gap-4">

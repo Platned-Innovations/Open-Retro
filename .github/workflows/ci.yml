@@ -1,4 +1,4 @@
-# CI/CD for rni-agile-retro.
+# CI/CD for open-retro.
 #
 #   PR into main   : lint -> test -> build
 #   Pushes to main : lint -> test -> build -> deploy
