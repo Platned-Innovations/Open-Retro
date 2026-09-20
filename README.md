@@ -241,12 +241,17 @@ App — `.github/workflows/ci.yml` deploys nothing from the upstream repo itself
    pipeline deliberately doesn't). Set `APP_URL` to the real
    `https://<your-app>.azurewebsites.net` or custom domain.
 
-   Also add **`WEBSITE_RUN_FROM_PACKAGE=1`**. Kudu's Zip Deploy doesn't clean
+   Also add **`PRE_BUILD_COMMAND=rm -rf .next`**. Kudu's Zip Deploy doesn't clean
    `/home/site/wwwroot` before extracting a new deployment — its own logs say so
-   ("CleanOutputPath False") — so without this, a stale `.next` build or `node_modules` left
-   over from an earlier deployment can keep being served, and a real deploy can silently show no
-   change at all. With it, each deployment's build is packaged and mounted as one atomic,
-   read-only unit, so nothing old is left to merge with.
+   ("CleanOutputPath False") — and this pipeline's zip deliberately excludes `.next/` so Oryx
+   builds it fresh on the server, but that also means a stale `.next` left over from an earlier
+   deployment can keep being served, and a real deploy can silently show no change at all. This
+   setting makes Oryx delete it before every build.
+
+   > **Do not set `WEBSITE_RUN_FROM_PACKAGE`** to work around the same problem. This app starts
+   > via `tsx server.ts`, not `next start`, so it needs the full source tree and a writable
+   > `.next` on disk at runtime. Run-from-package mounts a read-only, pre-built package instead,
+   > which skips Oryx's server-side build step entirely and takes the site down.
 
 4. **Enable WebSockets** — Configuration → General settings → **Web sockets: On**. Without it
    Socket.IO falls back to polling or fails outright.

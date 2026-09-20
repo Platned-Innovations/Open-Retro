@@ -32,15 +32,21 @@
 #     some destructive — so review them before merging, since nothing in this
 #     pipeline gates a bad one before it reaches production.
 #
-#  3. Set WEBSITE_RUN_FROM_PACKAGE=1 in the Web App's Application Settings.
-#     Kudu's Zip Deploy does not clean the target directory before extracting
-#     a new deployment (its logs even say so: "CleanOutputPath False"), so
-#     without this a stale `.next` build or `node_modules` from a previous
-#     deployment method can linger under /home/site/wwwroot and get served
-#     instead of the new build — a real deploy that silently doesn't change
-#     what users see. With this setting, Oryx still builds the app the same
-#     way, but the *result* is packaged and mounted as one atomic, read-only
-#     unit per deployment — nothing old survives to be merged with.
+#  3. Set PRE_BUILD_COMMAND="rm -rf .next" in the Web App's Application
+#     Settings. Kudu's Zip Deploy does not clean the target directory before
+#     extracting a new deployment (its logs even say so: "CleanOutputPath
+#     False"), and this zip deliberately excludes `.next/` so Oryx can build
+#     it fresh — but that also means a stale `.next` from a previous
+#     deployment method can linger under /home/site/wwwroot and keep being
+#     served, so a real deploy can silently show no change at all. This
+#     setting makes Oryx wipe it before every build.
+#
+#     Do NOT set WEBSITE_RUN_FROM_PACKAGE instead: this app starts via `tsx
+#     server.ts`, not `next start`, so it needs the full source tree,
+#     `node_modules` and a writable `.next` on disk at runtime — the opposite
+#     of what run-from-package's read-only, pre-built mount provides. Setting
+#     it skips Oryx's build step entirely and takes the site down (learned
+#     this the hard way — see git history if curious).
 
 name: CI
 
