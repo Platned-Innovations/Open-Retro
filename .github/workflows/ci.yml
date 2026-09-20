@@ -1,7 +1,13 @@
 # CI/CD for rni-agile-retro.
 #
-#   PR into DEV, and pushes to DEV : lint -> test -> build
-#   Pushes to PROD                 : lint -> test -> build -> migrate -> deploy
+#   PR into main   : lint -> test -> build
+#   Pushes to main : lint -> test -> build -> deploy
+#
+# No DATABASE_URL secret here on purpose: migrations are applied by the app
+# itself at startup (see src/server/bootstrap.ts), driven by the Web App's own
+# AUTO_MIGRATE Application Setting — not by this pipeline. That keeps the
+# production database credential out of GitHub entirely; only the deploy
+# mechanics need secrets here.
 #
 # Secrets and variables live in Settings -> Secrets and variables -> Actions.
 # GitHub separates the two and the distinction matters: a *secret* is encrypted,
@@ -10,37 +16,35 @@
 #
 #   Secrets                       Variables
 #   -------                       ---------
-#   DATABASE_URL                  AZURE_APP_NAME
-#   AZURE_WEBAPP_PUBLISH_PROFILE
+#   AZURE_WEBAPP_PUBLISH_PROFILE  AZURE_APP_NAME
 #
 # AZURE_WEBAPP_PUBLISH_PROFILE is the whole XML file: Portal -> the Web App ->
 # Get publish profile. Paste it in verbatim.
 #
-# Before the first PROD push:
+# Before the first push to main:
 #
 #  1. Kudu zip deploy needs basic auth, which Azure disables by default on newer
 #     Web Apps. Portal -> the Web App -> Configuration -> General settings ->
 #     "SCM Basic Auth Publishing Credentials": On.
 #
-#  2. The migrate job runs `prisma migrate deploy` against production
-#     unattended, and the migrations here are hand-written — some destructive.
-#     Both production jobs declare `environment: production`, so you can add a
-#     required reviewer under Settings -> Environments and turn the release into
-#     a one-click approval rather than an automatic one. Worth doing.
+#  2. Set AUTO_MIGRATE=true in the Web App's Application Settings so it applies
+#     pending migrations on startup. The migrations here are hand-written —
+#     some destructive — so review them before merging, since nothing in this
+#     pipeline gates a bad one before it reaches production.
 
 name: CI
 
 on:
   pull_request:
-    branches: [DEV]
+    branches: [main]
   push:
-    branches: [DEV, PROD]
+    branches: [main]
 
-# One release at a time. Two overlapping PROD runs could interleave a migration
-# with the deploy of a different commit.
+# One release at a time. Two overlapping main runs could otherwise deploy out
+# of order and leave an older commit's build live.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/PROD' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   lint:
@@ -103,45 +107,13 @@ jobs:
       # var unset.
       - run: npm run build
 
-  # The app also migrates itself at startup (see src/server/bootstrap.ts), so
-  # this job is belt-and-braces rather than duplication: a migration that cannot
-  # apply fails the pipeline here and the old code keeps serving, where relying
-  # on startup alone would turn the same problem into a crash-looping Web App.
-  # By the time the new build starts, its own check finds nothing pending.
-  migrate:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/PROD'
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      # Printed before anything is applied, so a failure leaves a record of the
-      # state the database was in. This has earned its place once already: it
-      # revealed a migration that had never been recorded, where a blind deploy
-      # would have failed half-way through.
-      - name: Migration status before applying
-        run: npx prisma migrate status || true
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      # `deploy`, never `dev`: applies committed migrations only, never
-      # generates one, and never needs a shadow database — which this database's
-      # user has no rights to create.
-      - name: Apply migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
   deploy:
     runs-on: ubuntu-latest
-    # Migrate first: the new code must never meet the old schema, and a build
-    # that doesn't compile must never get as far as altering production data.
-    needs: migrate
-    if: github.ref == 'refs/heads/PROD'
+    # A build that doesn't compile must never get as far as touching the Web
+    # App. Migration happens after this, inside the app's own startup — see the
+    # AUTO_MIGRATE note at the top of this file.
+    needs: build
+    if: github.ref == 'refs/heads/main'
     environment: production
     steps:
       - uses: actions/checkout@v4
