@@ -1,0 +1,162 @@
+# CI/CD for rni-agile-retro.
+#
+#   PR into DEV, and pushes to DEV : lint -> test -> build
+#   Pushes to PROD                 : lint -> test -> build -> migrate -> deploy
+#
+# Secrets and variables live in Settings -> Secrets and variables -> Actions.
+# GitHub separates the two and the distinction matters: a *secret* is encrypted,
+# masked in logs and unreadable once saved; a *variable* is plain text anyone
+# with read access can see.
+#
+#   Secrets                       Variables
+#   -------                       ---------
+#   DATABASE_URL                  AZURE_APP_NAME
+#   AZURE_WEBAPP_PUBLISH_PROFILE
+#
+# AZURE_WEBAPP_PUBLISH_PROFILE is the whole XML file: Portal -> the Web App ->
+# Get publish profile. Paste it in verbatim.
+#
+# Before the first PROD push:
+#
+#  1. Kudu zip deploy needs basic auth, which Azure disables by default on newer
+#     Web Apps. Portal -> the Web App -> Configuration -> General settings ->
+#     "SCM Basic Auth Publishing Credentials": On.
+#
+#  2. The migrate job runs `prisma migrate deploy` against production
+#     unattended, and the migrations here are hand-written — some destructive.
+#     Both production jobs declare `environment: production`, so you can add a
+#     required reviewer under Settings -> Environments and turn the release into
+#     a one-click approval rather than an automatic one. Worth doing.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [DEV]
+  push:
+    branches: [DEV, PROD]
+
+# One release at a time. Two overlapping PROD runs could interleave a migration
+# with the deploy of a different commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/PROD' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      # Matches docker-compose.test.yml, so the suite runs against the same
+      # Postgres major and credentials locally and in CI.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: retro
+          POSTGRES_PASSWORD: retro
+          POSTGRES_DB: agile_retro_test
+        ports:
+          - 5432:5432
+        # Without this the job races the database's startup and the first
+        # migration fails on connection refused.
+        options: >-
+          --health-cmd "pg_isready -U retro -d agile_retro_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # globalSetup runs `prisma migrate deploy` against this, so the run also
+      # proves every committed migration still applies to an empty database —
+      # the one thing local runs stop checking once a developer's test database
+      # is already migrated.
+      - run: npm test
+        env:
+          TEST_DATABASE_URL: postgres://retro:retro@localhost:5432/agile_retro_test
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # `next build` needs no secrets — verified by running it with every env
+      # var unset.
+      - run: npm run build
+
+  # The app also migrates itself at startup (see src/server/bootstrap.ts), so
+  # this job is belt-and-braces rather than duplication: a migration that cannot
+  # apply fails the pipeline here and the old code keeps serving, where relying
+  # on startup alone would turn the same problem into a crash-looping Web App.
+  # By the time the new build starts, its own check finds nothing pending.
+  migrate:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/PROD'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Printed before anything is applied, so a failure leaves a record of the
+      # state the database was in. This has earned its place once already: it
+      # revealed a migration that had never been recorded, where a blind deploy
+      # would have failed half-way through.
+      - name: Migration status before applying
+        run: npx prisma migrate status || true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # `deploy`, never `dev`: applies committed migrations only, never
+      # generates one, and never needs a shadow database — which this database's
+      # user has no rights to create.
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    # Migrate first: the new code must never meet the old schema, and a build
+    # that doesn't compile must never get as far as altering production data.
+    needs: migrate
+    if: github.ref == 'refs/heads/PROD'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      # Source, not a build: App Service runs Oryx, which does `npm install`
+      # then `npm run build` on the server. That is also why tsx, dotenv and
+      # cross-env are regular dependencies rather than devDependencies — the
+      # startup command needs them at runtime.
+      #
+      # `.env` is git-ignored so it is never in a checkout; excluded anyway,
+      # because one shipped by accident would silently override the App
+      # Service's Application Settings with a developer's local DATABASE_URL.
+      - name: Package source
+        run: zip -r deploy.zip . -x '*.git*' 'node_modules/*' '.next/*' '.env' 'deploy.zip'
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: deploy.zip

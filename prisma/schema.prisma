@@ -1,0 +1,550 @@
+// Agile Retro — Prisma schema
+// Structure: Company -> Project -> Retrospective (see plan doc for context)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+enum GlobalRole {
+  SUPER_ADMIN
+  USER
+}
+
+enum MembershipRole {
+  ADMIN
+  MEMBER
+}
+
+enum RetroTemplate {
+  MAD_SAD_GLAD
+  START_STOP_CONTINUE
+  FOUR_LS
+  WENT_WELL_IMPROVE_ACTIONS
+  CUSTOM
+}
+
+/// The retro's lifecycle: is this board live, finished, or filed away.
+///
+/// NOTE: DRAFT is unused and should stay that way. `RetroPhase.LOBBY` is the
+/// "not started yet" concept now, and wiring DRAFT up would create a second,
+/// conflicting one.
+enum RetroStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+/// The guided session flow, distinct from RetroStatus: a retro can be ACTIVE
+/// in LOBBY and equally ACTIVE in DISCUSS. Status says whether the board is
+/// live; phase says what the group is doing right now.
+enum RetroPhase {
+  LOBBY
+  CHECK_IN
+  COLLECT
+  GROUP
+  VOTE
+  DISCUSS
+  ACTIONS
+  CLOSED
+}
+
+/// Whether a column collects good news, bad news, or neither. Lets the
+/// insights view read a board's mood without asking anyone to fill anything in.
+enum ColumnSentiment {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+}
+
+/// The five things a team check-in asks about.
+///
+/// Five, not fifteen: the check-in has to be answerable in under a minute at
+/// the start of a meeting, or it becomes the thing people skip. Each one is
+/// scored 1-5 against anchored labels — see src/lib/health.ts for the wording,
+/// which is part of the measurement and not decoration.
+enum HealthDimension {
+  MORALE
+  DELIVERY
+  COLLABORATION
+  CLARITY
+  WORKLOAD
+}
+
+/// Replaces the old `done` boolean.
+///
+/// DROPPED exists so that "we talked about it and decided not to" stops
+/// counting against the completion rate. Without it, every abandoned idea looks
+/// like a failure to follow through, which makes the number useless and
+/// eventually makes teams stop raising things they might not do.
+enum ActionItemStatus {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  DROPPED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  role         GlobalRole @default(USER)
+  passwordHash String?
+  image        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  createdCompanies      Company[]            @relation("CompanyCreator")
+  companyMemberships    CompanyMembership[]
+  createdProjects       Project[]            @relation("ProjectCreator")
+  projectMemberships    ProjectMembership[]
+  loginTokens           LoginToken[]
+  sentInvitations       Invitation[]         @relation("InvitationSender")
+  createdRetros         Retrospective[]      @relation("RetroCreator")
+  facilitatedRetros     Retrospective[]      @relation("RetroFacilitator")
+  cards                 RetroCard[]
+  votes                 CardVote[]
+  retroParticipations   RetroParticipant[]
+  actionItemsCreated    ActionItem[]         @relation("ActionItemCreator")
+  actionItemAssignments ActionItemAssignee[]
+  comments              Comment[]
+  reactions             Reaction[]
+
+  @@index([role])
+}
+
+// Our own magic-link mechanism (12h, single-use). Used both for "email me a
+// login link" and for the link sent inside an invitation email.
+model LoginToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Company / Project / Membership / Invitation
+// ---------------------------------------------------------------------------
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  /// Whether this company's retro content may be sent to a model provider.
+  ///
+  /// Off by default, and per company rather than per install: sending the
+  /// candid contents of a retrospective to a third party is a decision each
+  /// company's admins make for themselves, not one a deploy makes for them.
+  ///
+  /// Nothing in this codebase may reach a model provider without first passing
+  /// requireCompanyAiEnabled() for the company that owns the project that owns
+  /// the retro. Note the insights page deliberately needs no such call — its
+  /// theme extraction is local, so insights work identically either way.
+  aiFeaturesEnabled Boolean @default(false)
+
+  createdBy   User                @relation("CompanyCreator", fields: [createdById], references: [id])
+  projects    Project[]
+  memberships CompanyMembership[]
+  invitations Invitation[]
+
+  @@index([name])
+}
+
+model CompanyMembership {
+  id        String         @id @default(cuid())
+  userId    String
+  companyId String
+  role      MembershipRole @default(MEMBER)
+  createdAt DateTime       @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company        Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy      User                @relation("ProjectCreator", fields: [createdById], references: [id])
+  memberships    ProjectMembership[]
+  invitations    Invitation[]
+  retrospectives Retrospective[]
+
+  @@index([companyId])
+}
+
+model ProjectMembership {
+  id        String         @id @default(cuid())
+  userId    String
+  projectId String
+  role      MembershipRole @default(MEMBER)
+  createdAt DateTime       @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+model Invitation {
+  id          String         @id @default(cuid())
+  email       String
+  companyId   String?
+  projectId   String?
+  role        MembershipRole @default(MEMBER)
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime       @default(now())
+
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy User     @relation("InvitationSender", fields: [invitedById], references: [id])
+
+  @@index([email])
+  @@index([projectId])
+  @@index([companyId])
+}
+
+// ---------------------------------------------------------------------------
+// Retrospective
+// ---------------------------------------------------------------------------
+
+model Retrospective {
+  id            String        @id @default(cuid())
+  projectId     String
+  title         String
+  template      RetroTemplate @default(START_STOP_CONTINUE)
+  status        RetroStatus   @default(DRAFT)
+  isAnonymous   Boolean       @default(false)
+  timerSeconds  Int?
+  timerEndsAt   DateTime?
+  facilitatorId String
+  createdById   String
+  createdAt     DateTime      @default(now())
+  startedAt     DateTime?
+  endedAt       DateTime?
+
+  /// Whether the guided flow applies at all. Retros that existed before the
+  /// phase engine are migrated to false, so their behaviour is byte-identical
+  /// to what their participants already knew; a facilitator can opt an old
+  /// board in, and can also deliberately run a new one freeform.
+  isGuided          Boolean    @default(true)
+  phase             RetroPhase @default(LOBBY)
+  phaseStartedAt    DateTime?
+
+  /// Safe ideation: during COLLECT nobody — the facilitator included — sees
+  /// anyone else's card content. Enforced in getRetroBoard, never in CSS.
+  hideOthersCards   Boolean    @default(true)
+  /// A one-way latch, set the first time the retro leaves COLLECT. Words that
+  /// have been read cannot be un-read, so re-hiding them would be a false
+  /// assurance rather than a feature.
+  collectRevealedAt DateTime?
+
+  /// Dot voting. 0 means unlimited, which is what every pre-engine retro had.
+  voteBudget        Int        @default(5)
+  /// Hide tallies while voting is open, so early votes don't snowball.
+  hideVoteCounts    Boolean    @default(true)
+
+  /// The card the group is talking about right now, during DISCUSS.
+  discussCardId     String?
+  /// Per-card allowance for DISCUSS, driving the shared timer.
+  discussSeconds    Int        @default(300)
+
+  /// A one-minute pulse before the board is opened. On by default now that it
+  /// does something; retros created before it existed keep it off.
+  checkInEnabled    Boolean    @default(true)
+
+  /// Per-retro HMAC key for anonymising check-in submissions.
+  ///
+  /// NEVER rotate it. The salt is the only thing linking a person to the answer
+  /// they can amend; changing it orphans every existing key, so the same person
+  /// would silently submit a second, separate check-in. Nothing in the codebase
+  /// writes this column after creation, and nothing should.
+  healthSalt        String     @default(cuid())
+
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  facilitator  User               @relation("RetroFacilitator", fields: [facilitatorId], references: [id])
+  createdBy    User               @relation("RetroCreator", fields: [createdById], references: [id])
+  discussCard  RetroCard?         @relation("RetroDiscussCard", fields: [discussCardId], references: [id], onDelete: SetNull)
+  columns        RetroColumn[]
+  actionItems    ActionItem[]
+  carryOvers     RetroCarryOver[]
+  cards          RetroCard[]
+  votes          CardVote[]
+  participants   RetroParticipant[]
+  healthCheckIns HealthCheckIn[]
+  healthScores   HealthScore[]
+
+  @@index([projectId])
+  /// "the last N retros in this project" — the shape every insight needs.
+  @@index([projectId, createdAt])
+}
+
+/// Who actually turned up, as opposed to who is a member.
+///
+/// Socket presence is in-memory and dies with the process, so it can answer
+/// "who is here now" but never "who was there". Participation over time is one
+/// of the few retro metrics worth trusting, and it needs a row.
+model RetroParticipant {
+  id              String   @id @default(cuid())
+  retrospectiveId String
+  userId          String
+  firstSeenAt     DateTime @default(now())
+
+  retrospective Retrospective @relation(fields: [retrospectiveId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([retrospectiveId, userId])
+  @@index([userId])
+}
+
+/// One person's pulse for one retrospective.
+///
+/// There is deliberately no userId column. `participantKey` is
+/// HMAC-SHA256(userId, retrospective.healthSalt), which buys two things at
+/// once: the same person can come back and amend their own answer, and nobody
+/// — including someone reading the database directly — can attribute a score
+/// to a person or follow the same person across two retrospectives, because
+/// each retro has its own salt.
+///
+/// The trade-off is real and worth stating: you cannot chase the three people
+/// who haven't answered, only report "7 of 10 submitted". Given that this
+/// tool's previous anonymity guarantee turned out to be defeatable from dev
+/// tools, and that "is this actually anonymous?" is the first question a team
+/// asks, the stronger guarantee is the right default.
+///
+/// The protection that does the most work, though, is k-anonymity on the read
+/// side — see MIN_SUBMISSIONS_FOR_AVERAGE in src/lib/health.ts. In a team of
+/// three, a distribution is not anonymous however the rows are keyed.
+model HealthCheckIn {
+  id              String   @id @default(cuid())
+  retrospectiveId String
+  participantKey  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  retrospective Retrospective @relation(fields: [retrospectiveId], references: [id], onDelete: Cascade)
+  scores        HealthScore[]
+
+  @@unique([retrospectiveId, participantKey])
+}
+
+model HealthScore {
+  id              String          @id @default(cuid())
+  checkInId       String
+  /// Denormalised from the check-in, for the same reason as CardVote: every
+  /// read is a groupBy per retro, and Prisma cannot group by a relation field.
+  retrospectiveId String
+  dimension       HealthDimension
+  /// 1-5. Also a CHECK constraint in the database — a score outside the scale
+  /// silently skews every average that reads it.
+  value           Int
+
+  checkIn       HealthCheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+  retrospective Retrospective @relation(fields: [retrospectiveId], references: [id], onDelete: Cascade)
+
+  @@unique([checkInId, dimension])
+  @@index([retrospectiveId, dimension])
+}
+
+model RetroColumn {
+  id              String          @id @default(cuid())
+  retrospectiveId String
+  title           String
+  color           String          @default("#6366f1")
+  order           Int
+  sentiment       ColumnSentiment @default(NEUTRAL)
+
+  retrospective Retrospective @relation(fields: [retrospectiveId], references: [id], onDelete: Cascade)
+  cards         RetroCard[]
+
+  @@index([retrospectiveId])
+  /// Not a business rule — the target for RetroCard's composite foreign key,
+  /// which is what stops a card's denormalised retrospectiveId drifting from
+  /// its column's.
+  @@unique([id, retrospectiveId])
+}
+
+model RetroCard {
+  id              String   @id @default(cuid())
+  columnId        String
+  /// Denormalised from the column. Prisma's groupBy cannot group by a relation
+  /// field, so without this every per-retro aggregate becomes raw SQL or an
+  /// N+1 — and the vote-budget check would be a join on the hot path. The
+  /// composite foreign key below is what keeps it honest.
+  retrospectiveId String
+  authorId        String?
+  content         String
+  order           Int
+  groupId         String? // self-relation: cards merged/stacked under a "lead" card
+  /// Stamped when the DISCUSS pointer moves off this card.
+  discussedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  /// Composite FK, so the database — not the application — guarantees a card's
+  /// retrospectiveId matches its column's. A write that would let the two
+  /// disagree is rejected outright.
+  column        RetroColumn     @relation(fields: [columnId, retrospectiveId], references: [id, retrospectiveId], onDelete: Cascade)
+  retrospective Retrospective   @relation(fields: [retrospectiveId], references: [id], onDelete: Cascade)
+  author        User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  group         RetroCard?      @relation("CardGroup", fields: [groupId], references: [id], onDelete: SetNull)
+  grouped       RetroCard[]     @relation("CardGroup")
+  discussedIn    Retrospective[] @relation("RetroDiscussCard")
+  sourcedActions ActionItem[]    @relation("ActionItemSource")
+  votes         CardVote[]
+  comments      Comment[]
+  reactions     Reaction[]
+
+  @@index([columnId])
+  @@index([groupId])
+  @@index([retrospectiveId])
+}
+
+model CardVote {
+  id              String   @id @default(cuid())
+  cardId          String
+  /// Denormalised for the same reason as RetroCard.retrospectiveId: "how many
+  /// of my votes have I spent on this board?" runs on every vote, and must be
+  /// one index-only scan rather than a join.
+  retrospectiveId String
+  userId          String
+  createdAt       DateTime @default(now())
+
+  card          RetroCard     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  retrospective Retrospective @relation(fields: [retrospectiveId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, userId])
+  @@index([retrospectiveId, userId])
+}
+
+model ActionItem {
+  id              String           @id @default(cuid())
+  /// The retro where this was raised. Carrying an item forward does NOT move
+  /// it — see RetroCarryOver.
+  retrospectiveId String
+  description     String
+  dueDate         DateTime?
+  status          ActionItemStatus @default(OPEN)
+  /// Stamped on the transition *into* DONE, so re-saving a finished item
+  /// neither moves the date nor re-sends its notification.
+  completedAt     DateTime?
+  /// The card this came out of, when it was raised from the discussion.
+  sourceCardId    String?
+  /// Set the first and only time the scheduler nudges this item's assignees
+  /// about its due date. One email per item, ever — see the note on
+  /// sendDueDateReminders for why this is not a daily loop.
+  dueReminderSentAt DateTime?
+  createdById     String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  retrospective Retrospective        @relation(fields: [retrospectiveId], references: [id], onDelete: Cascade)
+  sourceCard    RetroCard?           @relation("ActionItemSource", fields: [sourceCardId], references: [id], onDelete: SetNull)
+  createdBy     User                 @relation("ActionItemCreator", fields: [createdById], references: [id])
+  assignees     ActionItemAssignee[]
+  comments      Comment[]
+  carryOvers    RetroCarryOver[]
+
+  @@index([retrospectiveId, status])
+  /// "my open work, soonest first" — the /my-actions query.
+  @@index([status, dueDate])
+  @@index([sourceCardId])
+  /// The scheduler's sweep: "not reminded yet, due by now".
+  @@index([dueReminderSentAt, dueDate])
+}
+
+/// An unresolved action item pulled onto a *later* retro's board for review.
+///
+/// Deliberately a reference rather than a copy. Duplicating the row would fork
+/// the item: two comment threads, two assignee sets, two "you've been assigned"
+/// emails, and a completion rate that counts the same work twice. Referencing
+/// keeps one canonical item with one history — and `count(carryOvers)` becomes
+/// a first-class staleness signal: an action that has dragged through four
+/// retros is telling you something a boolean never could.
+model RetroCarryOver {
+  id              String    @id @default(cuid())
+  retrospectiveId String
+  actionItemId    String
+  createdAt       DateTime  @default(now())
+  /// Stamped when the team has actually looked at it again, as opposed to it
+  /// merely being listed.
+  reviewedAt      DateTime?
+
+  retrospective Retrospective @relation(fields: [retrospectiveId], references: [id], onDelete: Cascade)
+  actionItem    ActionItem    @relation(fields: [actionItemId], references: [id], onDelete: Cascade)
+
+  @@unique([retrospectiveId, actionItemId])
+  @@index([actionItemId])
+}
+
+model ActionItemAssignee {
+  id           String   @id @default(cuid())
+  actionItemId String
+  userId       String
+  createdAt    DateTime @default(now())
+
+  actionItem ActionItem @relation(fields: [actionItemId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([actionItemId, userId])
+  @@index([userId])
+}
+
+model Comment {
+  id           String   @id @default(cuid())
+  cardId       String?
+  actionItemId String?
+  authorId     String
+  content      String
+  createdAt    DateTime @default(now())
+
+  card       RetroCard?  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  actionItem ActionItem? @relation(fields: [actionItemId], references: [id], onDelete: Cascade)
+  author     User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([cardId])
+  @@index([actionItemId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  cardId    String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  card RetroCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, userId, emoji])
+}

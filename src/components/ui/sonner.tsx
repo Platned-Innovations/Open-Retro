@@ -1,0 +1,52 @@
+"use client"
+
+import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+
+const Toaster = ({ ...props }: ToasterProps) => {
+  return (
+    <Sonner
+      // Fixed light, matching the app.
+      //
+      // This read `useTheme()` from next-themes with no ThemeProvider mounted
+      // anywhere, so it always fell back to "system" — which meant a viewer
+      // whose OS is in dark mode got dark toasts on top of a light app. The
+      // app has no dark mode; the toasts shouldn't pretend otherwise.
+      theme="light"
+      className="toaster group"
+      icons={{
+        success: (
+          <CircleCheckIcon className="size-4" />
+        ),
+        info: (
+          <InfoIcon className="size-4" />
+        ),
+        warning: (
+          <TriangleAlertIcon className="size-4" />
+        ),
+        error: (
+          <OctagonXIcon className="size-4" />
+        ),
+        loading: (
+          <Loader2Icon className="size-4 animate-spin" />
+        ),
+      }}
+      style={
+        {
+          "--normal-bg": "var(--popover)",
+          "--normal-text": "var(--popover-foreground)",
+          "--normal-border": "var(--border)",
+          "--border-radius": "var(--radius)",
+        } as React.CSSProperties
+      }
+      toastOptions={{
+        classNames: {
+          toast: "cn-toast",
+        },
+      }}
+      {...props}
+    />
+  )
+}
+
+export { Toaster }

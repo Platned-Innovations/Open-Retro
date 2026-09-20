@@ -1,0 +1,28 @@
+# Throwaway Postgres for the test suite.
+#
+# The tests truncate tables between cases, so they must NEVER be pointed at the
+# real database in .env — this exists so `npm test` can't reach it by accident.
+# Port 5433, not 5432, so it can't collide with a locally installed Postgres.
+#
+#   docker compose -f docker-compose.test.yml up -d
+#   npm test
+#   docker compose -f docker-compose.test.yml down -v
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rni-agile-retro-test-db
+    environment:
+      POSTGRES_USER: retro
+      POSTGRES_PASSWORD: retro
+      POSTGRES_DB: agile_retro_test
+    ports:
+      - "5433:5432"
+    # tmpfs, not a volume: the data is disposable by design and this keeps the
+    # suite fast (no fsync to disk on every truncate).
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U retro -d agile_retro_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
