@@ -32,21 +32,20 @@
 #     some destructive — so review them before merging, since nothing in this
 #     pipeline gates a bad one before it reaches production.
 #
-#  3. Set PRE_BUILD_COMMAND="rm -rf .next" in the Web App's Application
-#     Settings. Kudu's Zip Deploy does not clean the target directory before
-#     extracting a new deployment (its logs even say so: "CleanOutputPath
-#     False"), and this zip deliberately excludes `.next/` so Oryx can build
-#     it fresh — but that also means a stale `.next` from a previous
-#     deployment method can linger under /home/site/wwwroot and keep being
-#     served, so a real deploy can silently show no change at all. This
-#     setting makes Oryx wipe it before every build.
+#  3. Leave SCM_DO_BUILD_DURING_DEPLOYMENT unset (or false) — this pipeline
+#     builds in GitHub Actions and ships the finished app, not source. Oryx
+#     has nothing to build, and its build sandbox has been unreliable for this
+#     app (observed hangs of 15+ minutes mid `npm install`, and separately,
+#     "successful" 4-second builds that had silently never run at all — Zip
+#     Deploy only builds server-side when this setting is explicitly true,
+#     which was never set, so every deploy for a while was just extracting
+#     source on top of whatever `.next` happened to already be there).
 #
-#     Do NOT set WEBSITE_RUN_FROM_PACKAGE instead: this app starts via `tsx
-#     server.ts`, not `next start`, so it needs the full source tree,
-#     `node_modules` and a writable `.next` on disk at runtime — the opposite
-#     of what run-from-package's read-only, pre-built mount provides. Setting
-#     it skips Oryx's build step entirely and takes the site down (learned
-#     this the hard way — see git history if curious).
+#     Do NOT set WEBSITE_RUN_FROM_PACKAGE either: this app starts via `tsx
+#     server.ts`, not `next start`, so even a pre-built deployment needs a
+#     writable `.next` on disk at runtime (Next's file-system cache writes
+#     there) — the opposite of run-from-package's read-only mount. Learned
+#     both of these the hard way; see git history if curious.
 
 name: CI
 
@@ -122,27 +121,46 @@ jobs:
       # `next build` needs no secrets — verified by running it with every env
       # var unset.
       - run: npm run build
-
-  deploy:
-    runs-on: ubuntu-latest
-    # A build that doesn't compile must never get as far as touching the Web
-    # App. Migration happens after this, inside the app's own startup — see the
-    # AUTO_MIGRATE note at the top of this file.
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      # Source, not a build: App Service runs Oryx, which does `npm install`
-      # then `npm run build` on the server. That is also why tsx, dotenv and
-      # cross-env are regular dependencies rather than devDependencies — the
-      # startup command needs them at runtime.
+      # Everything past here only runs for an actual deploy (push to main), so
+      # a PR build doesn't spend time packaging an artifact nobody will use.
+      #
+      # Pruned rather than shipped whole: `typescript`, `eslint`, `tailwindcss`
+      # and `vitest` did their job producing `.next` above and are never
+      # touched again. `prisma`, `next`, `tsx`, `dotenv` and `cross-env` stay —
+      # they're regular `dependencies` because the startup command needs them
+      # at runtime.
+      - name: Prune devDependencies for deployment
+        if: github.ref == 'refs/heads/main'
+        run: npm prune --omit=dev
+      # The whole built app, not just source: this ships to Azure as-is and
+      # runs as-is. Oryx builds nothing (see the SCM_DO_BUILD_DURING_DEPLOYMENT
+      # note at the top of this file) — its build sandbox was unreliable for
+      # this app, so building here, where it's already proven fast and
+      # deterministic, and shipping the result removes that dependency
+      # entirely.
       #
       # `.env` is git-ignored so it is never in a checkout; excluded anyway,
       # because one shipped by accident would silently override the App
       # Service's Application Settings with a developer's local DATABASE_URL.
-      - name: Package source
-        run: zip -r deploy.zip . -x '*.git*' 'node_modules/*' '.next/*' '.env' 'deploy.zip'
+      - name: Package built app for deployment
+        if: github.ref == 'refs/heads/main'
+        run: zip -r deploy.zip . -x '*.git*' '.env' 'deploy.zip'
+      - uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: deploy-package
+          path: deploy.zip
+          retention-days: 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: deploy-package
       - uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.AZURE_APP_NAME }}
