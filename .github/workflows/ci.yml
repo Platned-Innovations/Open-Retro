@@ -142,9 +142,17 @@ jobs:
       # `.env` is git-ignored so it is never in a checkout; excluded anyway,
       # because one shipped by accident would silently override the App
       # Service's Application Settings with a developer's local DATABASE_URL.
+      #
+      # `.next/cache/*` is pure build-time cache (webpack/Turbopack incremental
+      # state) — Next.js's own docs say not to deploy it, and shipping it here
+      # was needlessly bloating every deployment against an already-tight disk
+      # quota. `.windsurf`/`.claude`/`.agents` are local AI-tool config, not
+      # app files; they were only ever in the zip by omission.
       - name: Package built app for deployment
         if: github.ref == 'refs/heads/main'
-        run: zip -r deploy.zip . -x '*.git*' '.env' 'deploy.zip'
+        run: >
+          zip -r deploy.zip . -x '*.git*' '.env' 'deploy.zip'
+          '.next/cache/*' '.windsurf/*' '.claude/*' '.agents/*'
       - uses: actions/upload-artifact@v4
         if: github.ref == 'refs/heads/main'
         with:
