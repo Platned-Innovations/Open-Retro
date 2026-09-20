@@ -241,6 +241,13 @@ App — `.github/workflows/ci.yml` deploys nothing from the upstream repo itself
    pipeline deliberately doesn't). Set `APP_URL` to the real
    `https://<your-app>.azurewebsites.net` or custom domain.
 
+   Also add **`WEBSITE_RUN_FROM_PACKAGE=1`**. Kudu's Zip Deploy doesn't clean
+   `/home/site/wwwroot` before extracting a new deployment — its own logs say so
+   ("CleanOutputPath False") — so without this, a stale `.next` build or `node_modules` left
+   over from an earlier deployment can keep being served, and a real deploy can silently show no
+   change at all. With it, each deployment's build is packaged and mounted as one atomic,
+   read-only unit, so nothing old is left to merge with.
+
 4. **Enable WebSockets** — Configuration → General settings → **Web sockets: On**. Without it
    Socket.IO falls back to polling or fails outright.
 

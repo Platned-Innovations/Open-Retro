@@ -31,6 +31,16 @@
 #     pending migrations on startup. The migrations here are hand-written —
 #     some destructive — so review them before merging, since nothing in this
 #     pipeline gates a bad one before it reaches production.
+#
+#  3. Set WEBSITE_RUN_FROM_PACKAGE=1 in the Web App's Application Settings.
+#     Kudu's Zip Deploy does not clean the target directory before extracting
+#     a new deployment (its logs even say so: "CleanOutputPath False"), so
+#     without this a stale `.next` build or `node_modules` from a previous
+#     deployment method can linger under /home/site/wwwroot and get served
+#     instead of the new build — a real deploy that silently doesn't change
+#     what users see. With this setting, Oryx still builds the app the same
+#     way, but the *result* is packaged and mounted as one atomic, read-only
+#     unit per deployment — nothing old survives to be merged with.
 
 name: CI
 
