@@ -239,7 +239,11 @@ App — `.github/workflows/ci.yml` deploys nothing from the upstream repo itself
      the result sidesteps all of that. Don't also wire up the Deployment Center: two deployers racing
      each other is worse than either alone.
    - Startup command: leave default (`npm start`), which runs
-     `cross-env NODE_ENV=production tsx server.ts` and honours the `PORT` App Service injects.
+     `NODE_ENV=production tsx server.ts` and honours the `PORT` App Service injects. (Not
+     `cross-env` — Azure's own Zip Deploy "node project optimizer" re-tars and re-extracts
+     `node_modules` at container startup, which was corrupting `cross-env`'s `.bin` symlink and
+     crashing the app before it could even start. Production only ever runs on Linux, so the plain
+     shell syntax works fine and sidesteps the whole thing.)
 
    > **Do not set `WEBSITE_RUN_FROM_PACKAGE`.** This app starts via `tsx server.ts`, not
    > `next start`, so it needs a writable `.next` on disk at runtime (Next's file-system cache
