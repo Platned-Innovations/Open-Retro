@@ -6,6 +6,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Avatar, CountBadge } from "@platned/ui";
 import { ListChecks, ShieldCheck } from "lucide-react";
 import { countMyOpenActionItems } from "@/server/queries/myActions";
+import { version as appVersion } from "../../../package.json";
 
 /**
  * The count is the point: an action item you have to go looking for is one
@@ -36,8 +37,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Link href="/" className="flex items-center gap-2 text-default">
             <Image src="/logo.png" alt={appName} width={28} height={28} />
             <span className="flex flex-col leading-tight">
-              <span className="text-body font-semibold">{appName}</span>
-              <span className="text-body-sm text-default-secondary">Powered by Open Retro</span>
+              <span className="text-heading-sm font-semibold">{appName}</span>
+              <span className="text-xs text-default-secondary">Powered by Open Retro v{appVersion}</span>
             </span>
           </Link>
 
