@@ -229,24 +229,27 @@ App — `.github/workflows/ci.yml` deploys nothing from the upstream repo itself
 2. **Runtime & startup**
    - Stack: Node 20 LTS.
    - Deployment is a zip push from GitHub Actions on every push to `main` (see
-     `.github/workflows/ci.yml`). It ships **source**, so Oryx runs `npm install` (needs full
-     `dependencies`, not just prod-only — `tsx`, `dotenv` and `cross-env` are regular dependencies
-     for exactly this reason) then `npm run build` on the server. Don't also wire up the Deployment
-     Center: two deployers racing each other is worse than either alone.
+     `.github/workflows/ci.yml`). The workflow builds the app itself — `npm ci`, `npm run build`,
+     then `npm prune --omit=dev` — and ships the finished result, including `.next` and a
+     production-only `node_modules`. **Azure builds nothing**: leave `SCM_DO_BUILD_DURING_DEPLOYMENT`
+     unset (or `false`). This is deliberate, not an optimization — Oryx's own build sandbox proved
+     unreliable for this app (multi-minute hangs mid `npm install`, and separately, zip deploys that
+     silently skip the build entirely unless that setting is explicitly `true`, serving a stale
+     `.next` from whenever it last happened to build). Building once, in GitHub Actions, and shipping
+     the result sidesteps all of that. Don't also wire up the Deployment Center: two deployers racing
+     each other is worse than either alone.
    - Startup command: leave default (`npm start`), which runs
      `cross-env NODE_ENV=production tsx server.ts` and honours the `PORT` App Service injects.
+
+   > **Do not set `WEBSITE_RUN_FROM_PACKAGE`.** This app starts via `tsx server.ts`, not
+   > `next start`, so it needs a writable `.next` on disk at runtime (Next's file-system cache
+   > writes there) even when the deployment itself is pre-built. Run-from-package mounts a
+   > read-only package instead, which breaks that — found out the hard way.
 
 3. **Application settings** — add every row from the table above as an Application Setting,
    **including `AUTO_MIGRATE=true`** (the default — nothing else applies migrations, since the
    pipeline deliberately doesn't). Set `APP_URL` to the real
    `https://<your-app>.azurewebsites.net` or custom domain.
-
-   Also add **`WEBSITE_RUN_FROM_PACKAGE=1`**. Kudu's Zip Deploy doesn't clean
-   `/home/site/wwwroot` before extracting a new deployment — its own logs say so
-   ("CleanOutputPath False") — so without this, a stale `.next` build or `node_modules` left
-   over from an earlier deployment can keep being served, and a real deploy can silently show no
-   change at all. With it, each deployment's build is packaged and mounted as one atomic,
-   read-only unit, so nothing old is left to merge with.
 
 4. **Enable WebSockets** — Configuration → General settings → **Web sockets: On**. Without it
    Socket.IO falls back to polling or fails outright.
