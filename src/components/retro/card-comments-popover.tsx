@@ -13,6 +13,7 @@ import IconButton from "@mui/material/IconButton";
 import { addComment } from "@/server/actions/retros";
 import type { RetroCardWithRelations } from "@/server/queries/retros";
 import { useAction } from "@/lib/useAction";
+import { colorForUser, textColorOn } from "@/lib/userColor";
 
 export function CardCommentsPopover({
   retrospectiveId,
@@ -56,9 +57,12 @@ export function CardCommentsPopover({
             )}
             {card.comments.map((comment) => {
               const authorName = comment.authorName ?? "Anonymous";
+              const commentAvatarBg = colorForUser(authorName);
               return (
                 <Stack key={comment.id} direction="row" spacing={1}>
-                  <Avatar sx={{ width: 24, height: 24, fontSize: 11 }}>{authorName.slice(0, 1).toUpperCase()}</Avatar>
+                  <Avatar sx={{ width: 24, height: 24, fontSize: 11, bgcolor: commentAvatarBg, color: textColorOn(commentAvatarBg) }}>
+                    {authorName.slice(0, 1).toUpperCase()}
+                  </Avatar>
                   <Typography variant="body2">
                     <Typography component="span" variant="body2" sx={{ fontWeight: 500 }}>
                       {authorName}

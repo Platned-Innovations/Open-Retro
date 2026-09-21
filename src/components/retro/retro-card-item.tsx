@@ -22,6 +22,7 @@ import { deleteCard, moveCard, toggleReaction, toggleVote, ungroupCard, updateCa
 import type { RetroCardWithRelations } from "@/server/queries/retros";
 import { REACTIONS } from "@/lib/retroReactions";
 import { useAction } from "@/lib/useAction";
+import { colorForUser, textColorOn } from "@/lib/userColor";
 
 // No `currentUserId` or `isAnonymous`: the server already decided `card.isOwn`
 // and `card.authorName`, so this component has no identity comparison to make.
@@ -108,6 +109,7 @@ export function RetroCardItem({
   // name the browser was never sent, not one it is choosing to hide.
   const canEdit = card.isOwn || canModerate;
   const authorName = card.authorName ?? "Anonymous";
+  const authorAvatarBg = colorForUser(authorName);
   const hasVoted = optimistic.hasVoted;
 
   function saveEdit() {
@@ -246,7 +248,9 @@ export function RetroCardItem({
 
       <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between" }}>
         <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", minWidth: 0, flex: 1 }}>
-          <Avatar sx={{ width: 22, height: 22, fontSize: 11 }}>{authorName.slice(0, 1).toUpperCase()}</Avatar>
+          <Avatar sx={{ width: 22, height: 22, fontSize: 11, bgcolor: authorAvatarBg, color: textColorOn(authorAvatarBg) }}>
+            {authorName.slice(0, 1).toUpperCase()}
+          </Avatar>
           <Typography variant="caption" color="text.secondary" noWrap>
             {authorName}
           </Typography>

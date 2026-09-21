@@ -11,21 +11,40 @@ import TableHead from "@mui/material/TableHead";
 import TableBody from "@mui/material/TableBody";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
+import Avatar from "@mui/material/Avatar";
+import type { SvgIconProps } from "@mui/material/SvgIcon";
+import BusinessIcon from "@mui/icons-material/BusinessOutlined";
+import FolderIcon from "@mui/icons-material/FolderOpen";
+import PeopleIcon from "@mui/icons-material/PeopleOutlineOutlined";
 import { listAllUsers, listCompaniesAndProjectsForFilters } from "@/server/queries/users";
 import { listCompanies } from "@/server/queries/companies";
 import { AdminFilters } from "@/components/admin-filters";
 import { Pagination } from "@/components/ui/pagination";
 import { AdminUserActions } from "@/components/admin-user-actions";
+import { colorForUser, textColorOn } from "@/lib/userColor";
 
-function StatTile({ label, value }: { label: string; value: number }) {
+function StatTile({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactElement<SvgIconProps>;
+  color: "primary" | "secondary" | "info";
+}) {
   return (
-    <Paper variant="outlined" sx={{ p: 2.5 }}>
-      <Typography variant="h3" sx={{ fontWeight: 700 }}>
-        {value}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
+    <Paper variant="outlined" sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 2, borderTop: 3, borderTopColor: `${color}.main` }}>
+      <Avatar sx={{ bgcolor: `${color}.main`, width: 44, height: 44 }}>{icon}</Avatar>
+      <Box>
+        <Typography variant="h4" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
+          {value}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {label}
+        </Typography>
+      </Box>
     </Paper>
   );
 }
@@ -55,13 +74,18 @@ export default async function AdminPage({
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile label="Companies" value={companies.length} />
+          <StatTile label="Companies" value={companies.length} icon={<BusinessIcon />} color="primary" />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile label="Projects" value={companies.reduce((sum, c) => sum + c._count.projects, 0)} />
+          <StatTile
+            label="Projects"
+            value={companies.reduce((sum, c) => sum + c._count.projects, 0)}
+            icon={<FolderIcon />}
+            color="secondary"
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile label="Users" value={userPage.total} />
+          <StatTile label="Users" value={userPage.total} icon={<PeopleIcon />} color="info" />
         </Grid>
       </Grid>
 
@@ -94,10 +118,17 @@ export default async function AdminPage({
                   </TableCell>
                 </TableRow>
               ) : (
-                userPage.users.map((u) => (
+                userPage.users.map((u) => {
+                  const userBg = colorForUser(u.id);
+                  return (
                   <TableRow key={u.id} hover>
                     <TableCell sx={{ fontWeight: 500 }} title={u.name}>
-                      {u.name}
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                        <Avatar sx={{ width: 24, height: 24, fontSize: 12, bgcolor: userBg, color: textColorOn(userBg) }}>
+                          {u.name.slice(0, 1).toUpperCase()}
+                        </Avatar>
+                        <Box component="span">{u.name}</Box>
+                      </Stack>
                     </TableCell>
                     <TableCell sx={{ color: "text.secondary" }}>{u.email}</TableCell>
                     <TableCell>
@@ -148,7 +179,8 @@ export default async function AdminPage({
                       />
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

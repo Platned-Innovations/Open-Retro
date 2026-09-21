@@ -3,10 +3,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
-import Paper from "@mui/material/Paper";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
+import Card from "@mui/material/Card";
 import Divider from "@mui/material/Divider";
 import ChecklistIcon from "@mui/icons-material/Checklist";
 import {
@@ -121,13 +118,11 @@ export default async function MyActionsPage({
                   {group.companyName}
                 </Typography>
               </Typography>
-              <Paper variant="outlined" sx={{ mt: 1 }}>
-                <List disablePadding>
-                  {group.items.map((item, index) => (
-                    <ActionRow key={item.id} item={item} divider={index < group.items.length - 1} />
-                  ))}
-                </List>
-              </Paper>
+              <Stack spacing={1.5} sx={{ mt: 1 }}>
+                {group.items.map((item) => (
+                  <ActionRow key={item.id} item={item} />
+                ))}
+              </Stack>
             </Box>
           ))}
         </Stack>
@@ -136,26 +131,28 @@ export default async function MyActionsPage({
   );
 }
 
-function ActionRow({ item, divider }: { item: MyActionItem; divider: boolean }) {
+const STATUS_BORDER_COLOR: Record<ActionItemStatus, string> = {
+  OPEN: "grey.400",
+  IN_PROGRESS: "info.main",
+  BLOCKED: "warning.main",
+  DONE: "success.main",
+  DROPPED: "grey.300",
+};
+
+function ActionRow({ item }: { item: MyActionItem }) {
   const overdue = isOverdue({ dueDate: item.dueDate, status: item.status as ActionItemStatus });
 
   return (
-    <ListItem
-      divider={divider}
-      secondaryAction={
-        <MyActionStatus
-          retrospectiveId={item.retrospective.id}
-          actionItemId={item.id}
-          status={item.status}
-          description={item.description}
-        />
-      }
-      sx={{ pr: 14 }}
+    <Card
+      variant="outlined"
+      sx={{ borderLeft: 4, borderLeftColor: overdue ? "error.main" : STATUS_BORDER_COLOR[item.status], p: 2 }}
     >
-      <ListItemText
-        primary={item.description}
-        secondary={
-          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", alignItems: "center", mt: 0.5 }}>
+      <Stack direction="row" sx={{ alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+            {item.description}
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", alignItems: "center", mt: 0.75 }}>
             <NavLinkText
               href={`/retros/${item.retrospective.id}`}
               variant="body2"
@@ -188,8 +185,14 @@ function ActionRow({ item, divider }: { item: MyActionItem; divider: boolean }) 
               />
             )}
           </Stack>
-        }
-      />
-    </ListItem>
+        </Box>
+        <MyActionStatus
+          retrospectiveId={item.retrospective.id}
+          actionItemId={item.id}
+          status={item.status}
+          description={item.description}
+        />
+      </Stack>
+    </Card>
   );
 }

@@ -9,6 +9,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
+import { alpha } from "@mui/material/styles";
 import { RetroCardItem } from "@/components/retro/retro-card-item";
 import { HiddenCardsNotice } from "@/components/retro/hidden-cards-notice";
 import { createCard } from "@/server/actions/retros";
@@ -84,8 +85,8 @@ export function RetroColumn({
           borderRadius: 3,
           border: 1,
           borderStyle: "dashed",
-          borderColor: isOver ? "primary.main" : "divider",
-          bgcolor: isOver ? "primary.50" : "action.hover",
+          borderColor: isOver ? column.color : alpha(column.color, 0.35),
+          bgcolor: isOver ? alpha(column.color, 0.12) : alpha(column.color, 0.05),
           p: 1.5,
         }}
       >

@@ -20,6 +20,7 @@ import { NavLinkButton, NavLinkCardArea } from "@/components/mui/nav-link";
 import { TEMPLATE_LABELS } from "@/lib/retroTemplates";
 import { effectiveVoteCount } from "@/lib/retroVotes";
 import { isUnresolved } from "@/lib/actionItems";
+import { colorForUser, textColorOn } from "@/lib/userColor";
 
 const STATUS_CHIP_COLOR: Record<string, ChipProps["color"]> = {
   DRAFT: "default",
@@ -127,14 +128,17 @@ export default async function RetroSummaryPage({
                       )}
                       {topLevel.map((card) => {
                         const authorName = card.authorName ?? "Anonymous";
+                        const cardAvatarBg = colorForUser(authorName);
                         return (
-                          <Box key={card.id} sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 1.5 }}>
+                          <Box key={card.id} sx={{ border: 1, borderColor: "divider", borderLeft: 3, borderLeftColor: column.color, borderRadius: 1, p: 1.5 }}>
                             <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
                               {card.content}
                             </Typography>
                             <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mt: 1 }}>
                               <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-                                <Avatar sx={{ width: 18, height: 18, fontSize: 10 }}>{authorName.slice(0, 1).toUpperCase()}</Avatar>
+                                <Avatar sx={{ width: 18, height: 18, fontSize: 10, bgcolor: cardAvatarBg, color: textColorOn(cardAvatarBg) }}>
+                                  {authorName.slice(0, 1).toUpperCase()}
+                                </Avatar>
                                 <Typography variant="caption" color="text.secondary">
                                   {authorName}
                                   {card.grouped.length > 0 && ` · +${card.grouped.length} merged`}

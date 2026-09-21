@@ -3,9 +3,11 @@ import { listMyProjects } from "@/server/queries/projects";
 import { NewProjectDialog } from "@/components/new-project-dialog";
 import { NewCompanyDialog } from "@/components/new-company-dialog";
 import { NavLinkText, NavLinkCardArea } from "@/components/mui/nav-link";
+import { colorForUser, textColorOn } from "@/lib/userColor";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import Avatar from "@mui/material/Avatar";
 import Card from "@mui/material/Card";
 import CardHeader from "@mui/material/CardHeader";
 import CardContent from "@mui/material/CardContent";
@@ -14,6 +16,7 @@ import Chip from "@mui/material/Chip";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import FolderIcon from "@mui/icons-material/FolderOpen";
 import ForumIcon from "@mui/icons-material/ForumOutlined";
+import BusinessIcon from "@mui/icons-material/BusinessOutlined";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -46,9 +49,16 @@ export default async function DashboardPage() {
       )}
 
       <Stack spacing={3}>
-        {companies.map((company) => (
-          <Card key={company.id} variant="outlined">
+        {companies.map((company) => {
+          const companyBg = colorForUser(company.id);
+          return (
+          <Card key={company.id} variant="outlined" sx={{ borderTop: 3, borderTopColor: "primary.main" }}>
             <CardHeader
+              avatar={
+                <Avatar variant="rounded" sx={{ width: 36, height: 36, bgcolor: companyBg, color: textColorOn(companyBg) }}>
+                  <BusinessIcon fontSize="small" />
+                </Avatar>
+              }
               title={
                 <NavLinkText
                   href={`/companies/${company.id}`}
@@ -67,6 +77,7 @@ export default async function DashboardPage() {
                   <ChevronRightIcon fontSize="small" />
                 </NavLinkText>
               }
+              subheader={`${company.projects.length} project${company.projects.length === 1 ? "" : "s"}`}
               action={<NewProjectDialog companyId={company.id} companyName={company.name} />}
             />
             <CardContent>
@@ -102,6 +113,7 @@ export default async function DashboardPage() {
                               icon={<ForumIcon />}
                               label={`${project._count.retrospectives} retro${project._count.retrospectives === 1 ? "" : "s"}`}
                               size="small"
+                              color="primary"
                               variant="outlined"
                               sx={{ width: "fit-content" }}
                             />
@@ -114,7 +126,8 @@ export default async function DashboardPage() {
               )}
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </Stack>
     </Stack>
   );

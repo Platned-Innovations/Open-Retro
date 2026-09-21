@@ -14,6 +14,7 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
 import { RenameDialog } from "@/components/rename-dialog";
+import { colorForUser, textColorOn } from "@/lib/userColor";
 import {
   removeProjectMember,
   updateProjectMemberRole,
@@ -53,6 +54,7 @@ export function MemberRow({ scope, scopeId, membership, currentUserId, isViewerA
   const [renameOpen, setRenameOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
+  const avatarBg = colorForUser(membership.user.id);
   const isSelf = membership.user.id === currentUserId;
   const targetIsAdmin = membership.role === "ADMIN";
   const isLastAdmin = targetIsAdmin && adminCount <= 1;
@@ -129,7 +131,9 @@ export function MemberRow({ scope, scopeId, membership, currentUserId, isViewerA
   return (
     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, p: 1.5 }}>
       <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", minWidth: 0 }}>
-        <Avatar sx={{ width: 32, height: 32, fontSize: 14 }}>{membership.user.name.slice(0, 1).toUpperCase()}</Avatar>
+        <Avatar sx={{ width: 32, height: 32, fontSize: 14, bgcolor: avatarBg, color: textColorOn(avatarBg) }}>
+          {membership.user.name.slice(0, 1).toUpperCase()}
+        </Avatar>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
             {membership.user.name}

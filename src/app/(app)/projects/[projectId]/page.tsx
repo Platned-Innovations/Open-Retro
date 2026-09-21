@@ -4,10 +4,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Grid from "@mui/material/Grid";
-import Paper from "@mui/material/Paper";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
+import Card from "@mui/material/Card";
 import Chip, { type ChipProps } from "@mui/material/Chip";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
 import BarChartIcon from "@mui/icons-material/BarChart";
@@ -19,7 +16,7 @@ import { InviteMemberDialog } from "@/components/invite-member-dialog";
 import { NewRetroDialog } from "@/components/new-retro-dialog";
 import { MembersPanel } from "@/components/members-panel";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
-import { NavLinkButton, NavLinkText } from "@/components/mui/nav-link";
+import { NavLinkButton, NavLinkCardArea } from "@/components/mui/nav-link";
 import { Pagination } from "@/components/ui/pagination";
 import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { deleteProject } from "@/server/actions/projects";
@@ -29,6 +26,13 @@ const STATUS_CHIP_COLOR: Record<string, ChipProps["color"]> = {
   ACTIVE: "success",
   COMPLETED: "info",
   ARCHIVED: "default",
+};
+
+const STATUS_BORDER_COLOR: Record<string, string> = {
+  DRAFT: "grey.400",
+  ACTIVE: "success.main",
+  COMPLETED: "info.main",
+  ARCHIVED: "grey.400",
 };
 
 export default async function ProjectPage({
@@ -113,34 +117,34 @@ export default async function ProjectPage({
             </Stack>
           ) : (
             <Stack spacing={2}>
-              <Paper variant="outlined">
-                <List disablePadding>
-                  {project.retrospectives.map((retro, index) => (
-                    <ListItem
-                      key={retro.id}
-                      divider={index < project.retrospectives.length - 1}
-                      secondaryAction={
-                        <Stack direction="row" spacing={1}>
+              <Stack spacing={1.5}>
+                {project.retrospectives.map((retro) => (
+                  <Card
+                    key={retro.id}
+                    variant="outlined"
+                    sx={{ borderLeft: 4, borderLeftColor: STATUS_BORDER_COLOR[retro.status] ?? "grey.400" }}
+                  >
+                    <NavLinkCardArea href={`/retros/${retro.id}`} sx={{ p: 2 }}>
+                      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1.5 }}>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {retro.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Facilitated by {retro.facilitator.name} · {formatDistanceToNow(retro.createdAt, { addSuffix: true })}
+                          </Typography>
+                        </Box>
+                        <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
                           {retro._count.actionItems > 0 && (
                             <Chip label={`${retro._count.actionItems} pending`} color="warning" size="small" variant="outlined" />
                           )}
                           <Chip label={retro.status} color={STATUS_CHIP_COLOR[retro.status]} size="small" />
                         </Stack>
-                      }
-                      sx={{ pr: 20 }}
-                    >
-                      <ListItemText
-                        primary={
-                          <NavLinkText href={`/retros/${retro.id}`} variant="body1" sx={{ fontWeight: 500, textDecoration: "none", color: "text.primary", "&:hover": { color: "primary.main" } }}>
-                            {retro.title}
-                          </NavLinkText>
-                        }
-                        secondary={`Facilitated by ${retro.facilitator.name} · ${formatDistanceToNow(retro.createdAt, { addSuffix: true })}`}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Paper>
+                      </Stack>
+                    </NavLinkCardArea>
+                  </Card>
+                ))}
+              </Stack>
               <Pagination
                 basePath={`/projects/${project.id}`}
                 params={{ retroPage }}
