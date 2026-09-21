@@ -36,7 +36,19 @@ export function RetroTimer({
   if (timerEndsAt) {
     return (
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-        <Countdown key={timerEndsAt.getTime()} endsAt={timerEndsAt} onExpire={() => router.refresh()} />
+        <Countdown
+          key={timerEndsAt.getTime()}
+          endsAt={timerEndsAt}
+          onExpire={() => router.refresh()}
+          // Nobody else clears a finished timer, so the moderator's own
+          // client does it: 20 seconds of blinking at 0:00 is enough to have
+          // been seen, and a timer left sitting at 0:00 forever reads as
+          // broken rather than finished. Only a moderator may call
+          // stopTimer at all, so a non-moderator's Countdown gets no
+          // callback and just waits for that broadcast like it already does
+          // for a manual stop.
+          onAutoStop={canModerate ? () => run(() => stopTimer(retrospectiveId)) : undefined}
+        />
         {canModerate && (
           <IconButton size="small" aria-label="Stop timer" onClick={() => run(() => stopTimer(retrospectiveId))}>
             <Square className="h-3.5 w-3.5" />
@@ -72,7 +84,16 @@ export function RetroTimer({
 
 /** Remounted (via `key`) whenever `endsAt` changes, so it never needs an
  * effect to react to prop changes -- only to the ticking clock itself. */
-function Countdown({ endsAt, onExpire }: { endsAt: Date; onExpire: () => void }) {
+function Countdown({
+  endsAt,
+  onExpire,
+  onAutoStop,
+}: {
+  endsAt: Date;
+  onExpire: () => void;
+  /** Called once, 20 seconds after `endsAt` passes. Omit to never auto-stop. */
+  onAutoStop?: () => void;
+}) {
   // Starts at null on both server and client so the very first render always
   // matches (no hydration mismatch from Date.now() differing by a few ms of
   // network latency between the SSR pass and the browser). The real value is
@@ -90,22 +111,36 @@ function Countdown({ endsAt, onExpire }: { endsAt: Date; onExpire: () => void })
   useEffect(() => {
     onExpireRef.current = onExpire;
   });
+  const onAutoStopRef = useRef(onAutoStop);
+  useEffect(() => {
+    onAutoStopRef.current = onAutoStop;
+  });
 
   useEffect(() => {
-    // `hasFired` lives inside the effect, so it resets exactly when it should:
-    // Countdown is remounted via `key` whenever `endsAt` changes.
+    // `hasFired`/`hasAutoStopped` live inside the effect, so they reset
+    // exactly when they should: Countdown is remounted via `key` whenever
+    // `endsAt` changes.
     let hasFired = false;
+    let hasAutoStopped = false;
 
     const tick = () => {
-      const next = Math.max(0, Math.round((endsAt.getTime() - Date.now()) / 1000));
-      setRemaining(next);
-      if (next > 0 || hasFired) return;
-      hasFired = true;
-      // `interval` is declared below, but `tick` only ever runs from a timer
-      // callback — never during this effect's synchronous body — so it is
-      // always initialised by the time we get here.
-      clearInterval(interval);
-      onExpireRef.current();
+      const diff = (endsAt.getTime() - Date.now()) / 1000;
+      setRemaining(Math.max(0, Math.round(diff)));
+
+      if (diff <= 0 && !hasFired) {
+        hasFired = true;
+        onExpireRef.current();
+      }
+
+      // Kept running past expiry (unlike the old clearInterval-on-expiry
+      // here) specifically so this can fire 20 real seconds later — including
+      // immediately, if a moderator opens the board long after a timer
+      // finished and nobody was around to stop it.
+      if (diff <= -20 && !hasAutoStopped) {
+        hasAutoStopped = true;
+        clearInterval(interval);
+        onAutoStopRef.current?.();
+      }
     };
 
     const immediate = setTimeout(tick, 0);
