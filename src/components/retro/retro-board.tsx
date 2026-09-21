@@ -261,7 +261,6 @@ export function RetroBoardView({
               action={deleteRetrospective}
               id={retro.id}
               redirectTo={`/projects/${retro.projectId}`}
-              size="medium"
             />
           )}
         </Stack>

@@ -60,7 +60,6 @@ export default async function CompanyPage({
               action={deleteCompany}
               id={company.id}
               redirectTo="/"
-              size="medium"
             />
           )}
         </Stack>
