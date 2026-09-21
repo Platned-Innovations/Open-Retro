@@ -62,7 +62,20 @@ export function RetroTimer({
 
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-      <TextField select size="small" value={preset} onChange={(e) => setPreset(e.target.value)} sx={{ width: 100 }}>
+      <TextField
+        select
+        size="small"
+        value={preset}
+        onChange={(e) => setPreset(e.target.value)}
+        sx={{
+          width: 100,
+          // A small outlined TextField is taller than a small Button by
+          // default (more vertical padding baked into MuiOutlinedInput),
+          // so left alone it stood out next to "Start timer"/"Copy link" in
+          // the same row.
+          "& .MuiSelect-select": { paddingTop: "4px", paddingBottom: "4px" },
+        }}
+      >
         {PRESETS.map((p) => (
           <MenuItem key={p.seconds} value={String(p.seconds)}>
             {p.label}
