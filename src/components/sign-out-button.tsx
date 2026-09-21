@@ -1,16 +1,17 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { Button } from "@platned/ui";
+import Button from "@mui/material/Button";
 import { LogOut } from "lucide-react";
 
 export function SignOutButton() {
   return (
     <Button
-      variant="subtle"
-      size="md"
+      variant="text"
+      color="inherit"
+      size="small"
       onClick={() => signOut({ callbackUrl: "/login" })}
-      leadingIcon={<LogOut className="h-4 w-4" />}
+      startIcon={<LogOut className="h-4 w-4" />}
     >
       Sign out
     </Button>

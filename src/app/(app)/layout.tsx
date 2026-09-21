@@ -1,9 +1,15 @@
-import Link from "next/link";
 import Image from "next/image";
+import AppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
+import Box from "@mui/material/Box";
+import Container from "@mui/material/Container";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Avatar from "@mui/material/Avatar";
+import Chip from "@mui/material/Chip";
 import { auth } from "@/lib/auth";
 import { SignOutButton } from "@/components/sign-out-button";
-import { LinkButton } from "@/components/ui/link-button";
-import { Avatar, CountBadge } from "@platned/ui";
+import { NavLinkBox, NavLinkButton } from "@/components/mui/nav-link";
 import { ListChecks, ShieldCheck } from "lucide-react";
 import { countMyOpenActionItems } from "@/server/queries/myActions";
 import { version as appVersion } from "../../../package.json";
@@ -16,12 +22,12 @@ async function MyActionsLink() {
   const open = await countMyOpenActionItems();
 
   return (
-    <LinkButton href="/my-actions" variant="subtle" size="md" leadingIcon={<ListChecks className="h-4 w-4" />}>
-      <span className="flex items-center gap-1.5">
+    <NavLinkButton href="/my-actions" color="inherit" size="small" startIcon={<ListChecks className="h-4 w-4" />}>
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
         My actions
-        {open > 0 && <CountBadge count={open} tone="warning" />}
-      </span>
-    </LinkButton>
+        {open > 0 && <Chip label={open} color="warning" size="small" />}
+      </Stack>
+    </NavLinkButton>
   );
 }
 
@@ -31,36 +37,60 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const appName = process.env.APP_NAME ?? "Agile Retro";
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-default bg-default">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link href="/" className="flex items-center gap-2 text-default">
-            <Image src="/logo.png" alt={appName} width={28} height={28} />
-            <span className="flex flex-col leading-tight">
-              <span className="text-heading-sm font-semibold">{appName}</span>
-              <span className="text-xs text-default-secondary">Powered by Open Retro v{appVersion}</span>
-            </span>
-          </Link>
+    <Box sx={{ display: "flex", minHeight: "100vh", flexDirection: "column" }}>
+      <AppBar position="static" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: "divider" }}>
+        <Container maxWidth={false} sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
+          <Toolbar disableGutters sx={{ justifyContent: "space-between" }}>
+            <NavLinkBox
+              href="/"
+              sx={{ display: "flex", alignItems: "center", gap: 1, color: "text.primary", textDecoration: "none" }}
+            >
+              <Image src="/logo.png" alt={appName} width={28} height={28} />
+              <Box sx={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+                <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
+                  {appName}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Powered by Open Retro v{appVersion}
+                </Typography>
+              </Box>
+            </NavLinkBox>
 
-          <nav className="flex items-center gap-4">
-            {user && <MyActionsLink />}
-            {user?.role === "SUPER_ADMIN" && (
-              <LinkButton href="/admin" variant="subtle" size="md" leadingIcon={<ShieldCheck className="h-4 w-4" />}>
-                Admin
-              </LinkButton>
-            )}
-            {user && (
-              <div className="flex items-center gap-2">
-                <Avatar type="initial" initial={(user.name?.[0] ?? "?").toUpperCase()} size="sm" />
-                <span className="hidden text-body-sm text-default-secondary sm:inline">{user.name}</span>
-              </div>
-            )}
-            <SignOutButton />
-          </nav>
-        </div>
-      </header>
+            <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
+              {user && <MyActionsLink />}
+              {user?.role === "SUPER_ADMIN" && (
+                <NavLinkButton
+                  href="/admin"
+                  color="inherit"
+                  size="small"
+                  startIcon={<ShieldCheck className="h-4 w-4" />}
+                >
+                  Admin
+                </NavLinkButton>
+              )}
+              {user && (
+                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                  <Avatar sx={{ width: 28, height: 28, fontSize: 14 }}>
+                    {(user.name?.[0] ?? "?").toUpperCase()}
+                  </Avatar>
+                  <Typography variant="body2" color="text.secondary" sx={{ display: { xs: "none", sm: "inline" } }}>
+                    {user.name}
+                  </Typography>
+                </Stack>
+              )}
+              <SignOutButton />
+            </Stack>
+          </Toolbar>
+        </Container>
+      </AppBar>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8">{children}</main>
-    </div>
+      <Container
+        component="main"
+        maxWidth={false}
+        sx={{ flex: 1, display: "flex", flexDirection: "column", px: { xs: 2, sm: 3, md: 4 }, py: 4 }}
+      >
+        {children}
+      </Container>
+    </Box>
   );
 }
