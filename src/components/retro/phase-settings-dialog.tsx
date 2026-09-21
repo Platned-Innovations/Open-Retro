@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Button,
-  InlineAlert,
-  Modal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  ModalTitle,
-  Select,
-  Toggle,
-} from "@platned/ui";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Stack from "@mui/material/Stack";
+import Alert from "@mui/material/Alert";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import Button from "@mui/material/Button";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
 import { configureRetroFlow } from "@/server/actions/retros";
 import type { RetroBoard } from "@/server/queries/retros";
 import { useAction } from "@/lib/useAction";
@@ -31,13 +32,7 @@ const DISCUSS_DURATIONS = [
 ];
 
 /** How the facilitator shapes this particular session. Moderators only. */
-export function PhaseSettingsDialog({
-  retro,
-  onClose,
-}: {
-  retro: RetroBoard;
-  onClose: () => void;
-}) {
+export function PhaseSettingsDialog({ retro, onClose }: { retro: RetroBoard; onClose: () => void }) {
   const { run, isPending } = useAction();
   const [isGuided, setIsGuided] = useState(retro.isGuided);
   const [hideOthersCards, setHideOthersCards] = useState(retro.hideOthersCards);
@@ -65,72 +60,71 @@ export function PhaseSettingsDialog({
   }
 
   return (
-    <Modal isOpen onClose={onClose} label="Session settings" size="sm">
-      <ModalHeader divider>
-        <ModalTitle>Session settings</ModalTitle>
-      </ModalHeader>
-      <ModalBody className="flex flex-col gap-4">
-        <Toggle
-          checked={isGuided}
-          onChange={setIsGuided}
-          label="Guided session"
-        />
-        <p className="-mt-2 text-body-tiny text-default-secondary">
-          Off means every activity stays open at once, the way a board worked before
-          phases existed.
-        </p>
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs" aria-label="Session settings">
+      <DialogTitle>Session settings</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2}>
+          <Stack spacing={0.5}>
+            <FormControlLabel control={<Switch checked={isGuided} onChange={(e) => setIsGuided(e.target.checked)} />} label="Guided session" />
+            <Typography variant="caption" color="text.secondary">
+              Off means every activity stays open at once, the way a board worked before phases existed.
+            </Typography>
+          </Stack>
 
-        <Toggle
-          checked={hideOthersCards}
-          onChange={setHideOthersCards}
-          disabled={!retro.canHideCards}
-          label="Hide other people's cards while collecting"
-        />
-        {!retro.canHideCards && (
-          <InlineAlert tone="info">
-            Cards on this board have already been revealed. Hiding them again wouldn&apos;t
-            un-see them, so this can&apos;t be switched back on.
-          </InlineAlert>
-        )}
+          <Stack spacing={0.5}>
+            <FormControlLabel
+              control={
+                <Switch checked={hideOthersCards} onChange={(e) => setHideOthersCards(e.target.checked)} disabled={!retro.canHideCards} />
+              }
+              label="Hide other people's cards while collecting"
+            />
+            {!retro.canHideCards && (
+              <Alert severity="info">
+                Cards on this board have already been revealed. Hiding them again wouldn&apos;t un-see them, so this can&apos;t be
+                switched back on.
+              </Alert>
+            )}
+          </Stack>
 
-        <Toggle
-          checked={hideVoteCounts}
-          onChange={setHideVoteCounts}
-          label="Hide vote counts until voting ends"
-        />
+          <FormControlLabel
+            control={<Switch checked={hideVoteCounts} onChange={(e) => setHideVoteCounts(e.target.checked)} />}
+            label="Hide vote counts until voting ends"
+          />
 
-        <Toggle
-          checked={checkInEnabled}
-          onChange={setCheckInEnabled}
-          label="Team health check-in"
-        />
-        <p className="-mt-2 text-body-tiny text-default-secondary">
-          Adds a step before the board: five anonymous questions about the last sprint.
-          Answers stay hidden until enough people have replied.
-        </p>
+          <Stack spacing={0.5}>
+            <FormControlLabel
+              control={<Switch checked={checkInEnabled} onChange={(e) => setCheckInEnabled(e.target.checked)} />}
+              label="Team health check-in"
+            />
+            <Typography variant="caption" color="text.secondary">
+              Adds a step before the board: five anonymous questions about the last sprint. Answers stay hidden until enough people
+              have replied.
+            </Typography>
+          </Stack>
 
-        <Select
-          label="Votes per person"
-          options={VOTE_BUDGETS}
-          value={voteBudget}
-          onChange={(e) => setVoteBudget(e.target.value)}
-        />
+          <TextField select label="Votes per person" fullWidth value={voteBudget} onChange={(e) => setVoteBudget(e.target.value)}>
+            {VOTE_BUDGETS.map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </TextField>
 
-        <Select
-          label="Discussion time"
-          options={DISCUSS_DURATIONS}
-          value={discussSeconds}
-          onChange={(e) => setDiscussSeconds(e.target.value)}
-        />
-      </ModalBody>
-      <ModalFooter divider align="end">
-        <Button variant="neutral" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button onClick={save} disabled={isPending}>
+          <TextField select label="Discussion time" fullWidth value={discussSeconds} onChange={(e) => setDiscussSeconds(e.target.value)}>
+            {DISCUSS_DURATIONS.map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={save} disabled={isPending}>
           Save
         </Button>
-      </ModalFooter>
-    </Modal>
+      </DialogActions>
+    </Dialog>
   );
 }

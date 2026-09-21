@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, Input, Modal, ModalHeader, ModalTitle, ModalBody, ModalFooter } from "@platned/ui";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
 
 type Props = {
   onClose: () => void;
@@ -36,20 +41,26 @@ export function RenameDialog({ onClose, currentName, label, onSave }: Props) {
   }
 
   return (
-    <Modal isOpen onClose={onClose} label={label} size="sm">
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs" aria-label={label}>
       <form onSubmit={handleSubmit}>
-        <ModalHeader divider>
-          <ModalTitle>{label}</ModalTitle>
-        </ModalHeader>
-        <ModalBody>
-          <Input label="Name" required autoFocus value={name} onChange={(e) => setName(e.target.value)} />
-        </ModalBody>
-        <ModalFooter divider>
-          <Button type="submit" disabled={isPending}>
+        <DialogTitle>{label}</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Name"
+            required
+            autoFocus
+            fullWidth
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            margin="dense"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button type="submit" variant="contained" disabled={isPending}>
             Save
           </Button>
-        </ModalFooter>
+        </DialogActions>
       </form>
-    </Modal>
+    </Dialog>
   );
 }

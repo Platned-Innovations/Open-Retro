@@ -4,7 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
-import { Button, ConfirmDialog } from "@platned/ui";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogActions from "@mui/material/DialogActions";
 import type { ActionResult } from "@/types/action-result";
 
 /**
@@ -24,7 +29,7 @@ export function DeleteConfirmButton({
   action,
   id,
   redirectTo,
-  size = "sm",
+  size = "small",
 }: {
   label: string;
   title: string;
@@ -32,7 +37,7 @@ export function DeleteConfirmButton({
   action: (id: string) => Promise<ActionResult<unknown>>;
   id: string;
   redirectTo: string;
-  size?: "sm" | "md";
+  size?: "small" | "medium";
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -59,21 +64,29 @@ export function DeleteConfirmButton({
 
   return (
     <>
-      <Button variant="danger" size={size} onClick={() => setOpen(true)} leadingIcon={<Trash2 className="h-3.5 w-3.5" />}>
+      <Button
+        variant="outlined"
+        color="error"
+        size={size}
+        onClick={() => setOpen(true)}
+        startIcon={<Trash2 className="h-3.5 w-3.5" />}
+      >
         {label}
       </Button>
-      <ConfirmDialog
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        onConfirm={handleConfirm}
-        title={title}
-        subtitle={description}
-        tone="danger"
-        confirmLabel="Delete"
-        confirmVariant="danger"
-        isConfirming={isPending}
-        confirmingLabel="Deleting…"
-      />
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{title}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{description}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)} disabled={isPending}>
+            Cancel
+          </Button>
+          <Button variant="contained" color="error" onClick={handleConfirm} disabled={isPending}>
+            {isPending ? "Deleting…" : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

@@ -1,17 +1,16 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, ListChecks, MessageSquareText } from "lucide-react";
-import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  EmptyState,
-  IconButton,
-  ProgressBar,
-  StatusBadge,
-} from "@platned/ui";
+import Card from "@mui/material/Card";
+import CardHeader from "@mui/material/CardHeader";
+import CardContent from "@mui/material/CardContent";
+import Stack from "@mui/material/Stack";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import LinearProgress from "@mui/material/LinearProgress";
 import { RetroTimer } from "@/components/retro/retro-timer";
 import { advanceDiscussion } from "@/server/actions/retros";
 import type { RetroBoard } from "@/server/queries/retros";
@@ -36,9 +35,7 @@ export function DiscussionFocus({
   const { run, isPending } = useAction();
   const { canModerate } = retro.viewer;
 
-  const topLevel = retro.columns
-    .flatMap((column) => column.cards.map((card) => ({ card, column })))
-    .filter(({ card }) => !card.groupId);
+  const topLevel = retro.columns.flatMap((column) => column.cards.map((card) => ({ card, column }))).filter(({ card }) => !card.groupId);
 
   // Mirrors the server's ordering so the progress count matches what the
   // facilitator is actually stepping through.
@@ -52,17 +49,15 @@ export function DiscussionFocus({
 
   if (!current) {
     return (
-      <Card>
-        <CardBody>
-          <EmptyState
-            icon={<MessageSquareText className="h-8 w-8" />}
-            message={
-              running.length === 0
-                ? "No cards to discuss yet."
-                : "No card selected — pick one to start the discussion."
-            }
-          />
-        </CardBody>
+      <Card variant="outlined">
+        <CardContent>
+          <Stack spacing={1} sx={{ py: 4, alignItems: "center", color: "text.secondary" }}>
+            <MessageSquareText className="h-8 w-8" style={{ opacity: 0.5 }} />
+            <Typography variant="body2" color="text.secondary">
+              {running.length === 0 ? "No cards to discuss yet." : "No card selected — pick one to start the discussion."}
+            </Typography>
+          </Stack>
+        </CardContent>
       </Card>
     );
   }
@@ -71,100 +66,91 @@ export function DiscussionFocus({
   const position = currentIndex + 1;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle size="md" className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: column.color }} />
-          Discussing · {column.title}
-        </CardTitle>
-      </CardHeader>
-      <CardBody className="gap-4">
-        <p className="whitespace-pre-wrap text-body text-default">{card.content}</p>
+    <Card variant="outlined">
+      <CardHeader
+        title={
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: column.color }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Discussing · {column.title}
+            </Typography>
+          </Stack>
+        }
+      />
+      <CardContent sx={{ pt: 0 }}>
+        <Stack spacing={2}>
+          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+            {card.content}
+          </Typography>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge
-            label={`${effectiveVoteCount(card)} vote${effectiveVoteCount(card) === 1 ? "" : "s"}`}
-            tone="info"
-            size="sm"
-          />
-          {card.grouped.length > 0 && (
-            <StatusBadge label={`+${card.grouped.length} merged`} tone="neutral" size="sm" />
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+            <Chip label={`${effectiveVoteCount(card)} vote${effectiveVoteCount(card) === 1 ? "" : "s"}`} color="info" size="small" />
+            {card.grouped.length > 0 && <Chip label={`+${card.grouped.length} merged`} size="small" />}
+            <Typography variant="caption" color="text.secondary">
+              {card.authorName ?? "Anonymous"}
+            </Typography>
+          </Stack>
+
+          {card.comments.length > 0 && (
+            <Stack spacing={0.75} sx={{ borderTop: 1, borderColor: "divider", pt: 1.5 }}>
+              {card.comments.map((comment) => (
+                <Typography key={comment.id} variant="body2" color="text.secondary">
+                  <Typography component="span" variant="body2" sx={{ fontWeight: 500, color: "text.primary" }}>
+                    {comment.authorName ?? "Anonymous"}
+                  </Typography>{" "}
+                  {comment.content}
+                </Typography>
+              ))}
+            </Stack>
           )}
-          <span className="text-body-tiny text-default-secondary">
-            {card.authorName ?? "Anonymous"}
-          </span>
-        </div>
 
-        {card.comments.length > 0 && (
-          <div className="flex flex-col gap-1.5 border-t border-default pt-3">
-            {card.comments.map((comment) => (
-              <p key={comment.id} className="text-body-sm text-default-secondary">
-                <span className="font-medium text-default">
-                  {comment.authorName ?? "Anonymous"}
-                </span>{" "}
-                {comment.content}
-              </p>
-            ))}
-          </div>
-        )}
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", borderTop: 1, borderColor: "divider", pt: 1.5 }}
+          >
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+              <LinearProgress
+                variant="determinate"
+                value={(position / running.length) * 100}
+                aria-label={`Card ${position} of ${running.length}`}
+                sx={{ width: 96, height: 6, borderRadius: 3 }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                {position} of {running.length}
+              </Typography>
+            </Stack>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-default pt-3">
-          <div className="flex items-center gap-3">
-            <ProgressBar
-              value={(position / running.length) * 100}
-              size="sm"
-              className="w-24"
-              aria-label={`Card ${position} of ${running.length}`}
-            />
-            <span className="text-body-tiny text-default-secondary">
-              {position} of {running.length}
-            </span>
-          </div>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Button variant="outlined" size="small" onClick={() => onCreateActionItem(card.content)} startIcon={<ListChecks className="h-3.5 w-3.5" />}>
+                Create action item
+              </Button>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="neutral"
-              size="sm"
-              onClick={() => onCreateActionItem(card.content)}
-              leadingIcon={<ListChecks className="h-3.5 w-3.5" />}
-            >
-              Create action item
-            </Button>
-
-            {canModerate && (
-              <>
-                <RetroTimer
-                  retrospectiveId={retro.id}
-                  timerEndsAt={retro.timerEndsAt}
-                  canModerate={canModerate}
-                />
-                <IconButton
-                  variant="neutral"
-                  size="sm"
-                  aria-label="Previous card"
-                  disabled={isPending || position === 1}
-                  onClick={() =>
-                    run(() => advanceDiscussion({ retrospectiveId: retro.id, direction: "previous" }))
-                  }
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </IconButton>
-                <IconButton
-                  variant="neutral"
-                  size="sm"
-                  aria-label="Next card"
-                  disabled={isPending || position === running.length}
-                  onClick={() =>
-                    run(() => advanceDiscussion({ retrospectiveId: retro.id, direction: "next" }))
-                  }
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </IconButton>
-              </>
-            )}
-          </div>
-        </div>
-      </CardBody>
+              {canModerate && (
+                <>
+                  <RetroTimer retrospectiveId={retro.id} timerEndsAt={retro.timerEndsAt} canModerate={canModerate} />
+                  <IconButton
+                    size="small"
+                    aria-label="Previous card"
+                    disabled={isPending || position === 1}
+                    onClick={() => run(() => advanceDiscussion({ retrospectiveId: retro.id, direction: "previous" }))}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    aria-label="Next card"
+                    disabled={isPending || position === running.length}
+                    onClick={() => run(() => advanceDiscussion({ retrospectiveId: retro.id, direction: "next" }))}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </IconButton>
+                </>
+              )}
+            </Stack>
+          </Stack>
+        </Stack>
+      </CardContent>
     </Card>
   );
 }

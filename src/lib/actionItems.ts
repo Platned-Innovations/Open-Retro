@@ -1,4 +1,4 @@
-import type { StatusTone } from "@platned/ui";
+import type { ChipProps } from "@mui/material/Chip";
 import type { ActionItemStatus } from "@/generated/prisma/client";
 
 /**
@@ -27,12 +27,12 @@ export const ACTION_STATUS_LABELS: Record<ActionItemStatus, string> = {
   DROPPED: "Dropped",
 };
 
-export const ACTION_STATUS_TONE: Record<ActionItemStatus, StatusTone> = {
-  OPEN: "neutral",
+export const ACTION_STATUS_CHIP_COLOR: Record<ActionItemStatus, ChipProps["color"]> = {
+  OPEN: "default",
   IN_PROGRESS: "info",
   BLOCKED: "warning",
-  DONE: "positive",
-  DROPPED: "neutral",
+  DONE: "success",
+  DROPPED: "default",
 };
 
 export const ACTION_STATUS_ORDER: ActionItemStatus[] = [

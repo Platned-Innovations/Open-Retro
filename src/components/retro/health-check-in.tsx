@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, CardBody, CardHeader, CardTitle, InlineAlert, SegmentedControl } from "@platned/ui";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardHeader from "@mui/material/CardHeader";
+import CardContent from "@mui/material/CardContent";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import ToggleButton from "@mui/material/ToggleButton";
 import { HeartPulse } from "lucide-react";
 import type { HealthDimension } from "@/generated/prisma/client";
 import {
@@ -16,10 +25,7 @@ import {
 import { submitHealthCheckIn } from "@/server/actions/retros";
 import { useAction } from "@/lib/useAction";
 
-const SCALE = Array.from({ length: HEALTH_SCALE_MAX - HEALTH_SCALE_MIN + 1 }, (_, i) => ({
-  value: String(HEALTH_SCALE_MIN + i),
-  label: String(HEALTH_SCALE_MIN + i),
-}));
+const SCALE = Array.from({ length: HEALTH_SCALE_MAX - HEALTH_SCALE_MIN + 1 }, (_, i) => HEALTH_SCALE_MIN + i);
 
 /**
  * Five questions, one minute.
@@ -39,8 +45,8 @@ export function HealthCheckIn({
   mine: { dimension: HealthDimension; value: number }[] | null;
 }) {
   const { run, isPending } = useAction();
-  const [scores, setScores] = useState<Partial<Record<HealthDimension, number>>>(
-    () => Object.fromEntries((mine ?? []).map((s) => [s.dimension, s.value])),
+  const [scores, setScores] = useState<Partial<Record<HealthDimension, number>>>(() =>
+    Object.fromEntries((mine ?? []).map((s) => [s.dimension, s.value])),
   );
 
   const answered = HEALTH_DIMENSIONS.filter((d) => scores[d] !== undefined).length;
@@ -60,59 +66,72 @@ export function HealthCheckIn({
   }
 
   return (
-    <Card>
-      <CardHeader size="sm">
-        <CardTitle size="sm" className="flex items-center gap-2">
-          <HeartPulse className="h-4 w-4 text-brand" />
-          {mine ? "Your check-in" : "How was the last sprint?"}
-        </CardTitle>
-      </CardHeader>
-      <CardBody className="gap-5">
-        {HEALTH_DIMENSIONS.map((dimension) => (
-          <fieldset key={dimension} className="flex flex-col gap-1.5">
-            <legend className="text-body-sm font-medium text-default">
-              {HEALTH_DIMENSION_LABELS[dimension]}
-              <span className="ml-2 font-normal text-default-secondary">
-                {HEALTH_DIMENSION_PROMPTS[dimension]}
-              </span>
-            </legend>
-            <div className="flex flex-wrap items-center gap-3">
-              <SegmentedControl
-                options={SCALE}
-                value={scores[dimension] === undefined ? "" : String(scores[dimension])}
-                onChange={(value) =>
-                  setScores((current) => ({ ...current, [dimension]: Number(value) }))
-                }
-              />
-              {/* Both ends named, in this dimension's own terms. An unlabelled
-                  1-5 measures how generous someone is feeling; it is also the
-                  only thing that makes "5" unambiguously good news for
-                  workload. */}
-              <span className="text-body-tiny text-default-secondary">
-                {HEALTH_SCALE_ANCHORS[dimension].low} → {HEALTH_SCALE_ANCHORS[dimension].high}
-              </span>
-            </div>
-          </fieldset>
-        ))}
+    <Card variant="outlined">
+      <CardHeader
+        title={
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <HeartPulse className="h-4 w-4" />
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              {mine ? "Your check-in" : "How was the last sprint?"}
+            </Typography>
+          </Stack>
+        }
+      />
+      <CardContent sx={{ pt: 0 }}>
+        <Stack spacing={3}>
+          {HEALTH_DIMENSIONS.map((dimension) => (
+            <Box component="fieldset" key={dimension} sx={{ border: 0, p: 0, m: 0 }}>
+              <Typography component="legend" variant="body2" sx={{ fontWeight: 500, p: 0 }}>
+                {HEALTH_DIMENSION_LABELS[dimension]}
+                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                  {HEALTH_DIMENSION_PROMPTS[dimension]}
+                </Typography>
+              </Typography>
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexWrap: "wrap", mt: 0.75 }}>
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={scores[dimension] === undefined ? null : scores[dimension]}
+                  onChange={(_, value: number | null) => {
+                    if (value === null) return;
+                    setScores((current) => ({ ...current, [dimension]: value }));
+                  }}
+                >
+                  {SCALE.map((n) => (
+                    <ToggleButton key={n} value={n} sx={{ minWidth: 36 }}>
+                      {n}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+                {/* Both ends named, in this dimension's own terms. An unlabelled
+                    1-5 measures how generous someone is feeling; it is also the
+                    only thing that makes "5" unambiguously good news for
+                    workload. */}
+                <Typography variant="caption" color="text.secondary">
+                  {HEALTH_SCALE_ANCHORS[dimension].low} → {HEALTH_SCALE_ANCHORS[dimension].high}
+                </Typography>
+              </Stack>
+            </Box>
+          ))}
 
-        {/* Said before answering, not after. Someone deciding how candid to be
-            deserves to know the threshold in advance. */}
-        <InlineAlert tone="info">
-          Your answers are anonymous, and nothing is shown until at least{" "}
-          {MIN_SUBMISSIONS_FOR_AVERAGE} people have checked in.
-        </InlineAlert>
+          {/* Said before answering, not after. Someone deciding how candid to be
+              deserves to know the threshold in advance. */}
+          <Alert severity="info">
+            Your answers are anonymous, and nothing is shown until at least {MIN_SUBMISSIONS_FOR_AVERAGE} people have checked in.
+          </Alert>
 
-        <div className="flex items-center gap-3">
-          <Button onClick={save} disabled={!complete || isPending}>
-            {mine ? "Update my check-in" : "Submit"}
-          </Button>
-          {!complete && (
-            <span className="text-body-sm text-default-secondary">
-              {answered} of {HEALTH_DIMENSIONS.length} answered
-            </span>
-          )}
-        </div>
-      </CardBody>
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+            <Button variant="contained" onClick={save} disabled={!complete || isPending}>
+              {mine ? "Update my check-in" : "Submit"}
+            </Button>
+            {!complete && (
+              <Typography variant="body2" color="text.secondary">
+                {answered} of {HEALTH_DIMENSIONS.length} answered
+              </Typography>
+            )}
+          </Stack>
+        </Stack>
+      </CardContent>
     </Card>
   );
 }

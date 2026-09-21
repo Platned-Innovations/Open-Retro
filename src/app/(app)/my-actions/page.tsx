@@ -1,14 +1,18 @@
-import Link from "next/link";
-import { Card, CardBody, EmptyState, PageHeading, StatusBadge } from "@platned/ui";
-import { ListChecks } from "lucide-react";
 import { format } from "date-fns";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import Card from "@mui/material/Card";
+import Divider from "@mui/material/Divider";
+import ChecklistIcon from "@mui/icons-material/Checklist";
 import {
   listMyActionItems,
   listMyActionProjects,
   type MyActionItem,
 } from "@/server/queries/myActions";
 import { MyActionStatus } from "@/components/actions/my-action-row";
-import { LinkButton } from "@/components/ui/link-button";
+import { NavLinkChip, NavLinkText } from "@/components/mui/nav-link";
 import { UNRESOLVED_STATUSES, isOverdue } from "@/lib/actionItems";
 import type { ActionItemStatus } from "@/generated/prisma/client";
 
@@ -61,112 +65,134 @@ export default async function MyActionsPage({
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <PageHeading
-        title="My action items"
-        subtitle="Everything assigned to you, across every project."
-      />
+    <Stack spacing={4}>
+      <Box>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          My action items
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Everything assigned to you, across every project.
+        </Typography>
+      </Box>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <LinkButton href={query({ show: showAll ? undefined : "all" })} variant="neutral" size="sm">
-          {showAll ? "Show outstanding only" : "Include finished"}
-        </LinkButton>
-        <span className="mx-1 h-4 w-px bg-divider" aria-hidden />
-        <LinkButton
+      <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", alignItems: "center" }}>
+        <NavLinkChip
+          href={query({ show: showAll ? undefined : "all" })}
+          label={showAll ? "Show outstanding only" : "Include finished"}
+          variant="outlined"
+        />
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+        <NavLinkChip
           href={query({ projectId: undefined })}
-          variant={projectId ? "neutral" : "primary"}
-          size="sm"
-        >
-          All projects
-        </LinkButton>
+          label="All projects"
+          color="primary"
+          variant={projectId ? "outlined" : "filled"}
+        />
         {projects.map((project) => (
-          <LinkButton
+          <NavLinkChip
             key={project.id}
             href={query({ projectId: project.id })}
-            variant={projectId === project.id ? "primary" : "neutral"}
-            size="sm"
-          >
-            {project.name}
-          </LinkButton>
+            label={project.name}
+            color="primary"
+            variant={projectId === project.id ? "filled" : "outlined"}
+          />
         ))}
-      </div>
+      </Stack>
 
       {items.length === 0 ? (
-        <EmptyState
-          icon={<ListChecks className="h-8 w-8" />}
-          message={
-            showAll
+        <Stack spacing={1.5} sx={{ py: 8, alignItems: "center", color: "text.secondary" }}>
+          <ChecklistIcon sx={{ fontSize: 40, opacity: 0.5 }} />
+          <Typography variant="body1" color="text.secondary">
+            {showAll
               ? "Nothing has been assigned to you yet."
-              : "Nothing outstanding. Anything finished is hidden — use “Include finished” to see it."
-          }
-          size="lg"
-        />
+              : 'Nothing outstanding. Anything finished is hidden — use "Include finished" to see it.'}
+          </Typography>
+        </Stack>
       ) : (
-        <div className="flex flex-col gap-6">
+        <Stack spacing={3}>
           {[...byProject.entries()].map(([id, group]) => (
-            <div key={id} className="flex flex-col gap-2">
-              <h2 className="text-heading-sm font-semibold text-default">
+            <Box key={id}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                 {group.name}
-                <span className="ml-2 text-body-sm font-normal text-default-secondary">
+                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
                   {group.companyName}
-                </span>
-              </h2>
-              <Card className="overflow-visible">
-                <CardBody size="sm" className="flex flex-col gap-0 divide-y divide-divider p-0">
-                  {group.items.map((item) => (
-                    <ActionRow key={item.id} item={item} />
-                  ))}
-                </CardBody>
-              </Card>
-            </div>
+                </Typography>
+              </Typography>
+              <Stack spacing={1.5} sx={{ mt: 1 }}>
+                {group.items.map((item) => (
+                  <ActionRow key={item.id} item={item} />
+                ))}
+              </Stack>
+            </Box>
           ))}
-        </div>
+        </Stack>
       )}
-    </div>
+    </Stack>
   );
 }
+
+const STATUS_BORDER_COLOR: Record<ActionItemStatus, string> = {
+  OPEN: "grey.400",
+  IN_PROGRESS: "info.main",
+  BLOCKED: "warning.main",
+  DONE: "success.main",
+  DROPPED: "grey.300",
+};
 
 function ActionRow({ item }: { item: MyActionItem }) {
   const overdue = isOverdue({ dueDate: item.dueDate, status: item.status as ActionItemStatus });
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 p-3">
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-body-sm text-default">{item.description}</span>
-        <div className="flex flex-wrap items-center gap-2 text-body-tiny text-default-secondary">
-          <Link href={`/retros/${item.retrospective.id}`} className="hover:text-brand">
-            {item.retrospective.title}
-          </Link>
-          {item.dueDate && (
-            <StatusBadge
-              label={`Due ${format(item.dueDate, "MMM d")}`}
-              tone={overdue ? "danger" : "neutral"}
-              size="sm"
-            />
-          )}
-          {/* An item that has followed the team through several retros is worth
-              surfacing here more than anywhere — this is the page where someone
-              can actually do something about it. */}
-          {item._count.carryOvers > 0 && (
-            <StatusBadge
-              label={
-                item._count.carryOvers === 1
-                  ? "carried over once"
-                  : `carried over ${item._count.carryOvers} times`
-              }
-              tone={item._count.carryOvers > 2 ? "warning" : "neutral"}
-              size="sm"
-            />
-          )}
-        </div>
-      </div>
-
-      <MyActionStatus
-        retrospectiveId={item.retrospective.id}
-        actionItemId={item.id}
-        status={item.status}
-        description={item.description}
-      />
-    </div>
+    <Card
+      variant="outlined"
+      sx={{ borderLeft: 4, borderLeftColor: overdue ? "error.main" : STATUS_BORDER_COLOR[item.status], p: 2 }}
+    >
+      <Stack direction="row" sx={{ alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+            {item.description}
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", alignItems: "center", mt: 0.75 }}>
+            <NavLinkText
+              href={`/retros/${item.retrospective.id}`}
+              variant="body2"
+              color="text.secondary"
+              sx={{ textDecoration: "none", "&:hover": { color: "primary.main" } }}
+            >
+              {item.retrospective.title}
+            </NavLinkText>
+            {item.dueDate && (
+              <Chip
+                label={`Due ${format(item.dueDate, "MMM d")}`}
+                color={overdue ? "error" : "default"}
+                size="small"
+                variant="outlined"
+              />
+            )}
+            {/* An item that has followed the team through several retros is worth
+                surfacing here more than anywhere — this is the page where someone
+                can actually do something about it. */}
+            {item._count.carryOvers > 0 && (
+              <Chip
+                label={
+                  item._count.carryOvers === 1
+                    ? "carried over once"
+                    : `carried over ${item._count.carryOvers} times`
+                }
+                color={item._count.carryOvers > 2 ? "warning" : "default"}
+                size="small"
+                variant="outlined"
+              />
+            )}
+          </Stack>
+        </Box>
+        <MyActionStatus
+          retrospectiveId={item.retrospective.id}
+          actionItemId={item.id}
+          status={item.status}
+          description={item.description}
+        />
+      </Stack>
+    </Card>
   );
 }

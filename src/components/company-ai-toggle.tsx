@@ -1,8 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardBody, CardHeader, CardTitle, InlineAlert, Toggle } from "@platned/ui";
-import { Sparkles } from "lucide-react";
+import Card from "@mui/material/Card";
+import CardHeader from "@mui/material/CardHeader";
+import CardContent from "@mui/material/CardContent";
+import Alert from "@mui/material/Alert";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+import Typography from "@mui/material/Typography";
+import Stack from "@mui/material/Stack";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { setCompanyAiFeatures } from "@/server/actions/companies";
 import { useAction } from "@/lib/useAction";
 
@@ -27,48 +34,56 @@ export function CompanyAiToggle({
   const [checked, setChecked] = useState(enabled);
 
   return (
-    <Card>
-      <CardHeader size="sm">
-        <CardTitle size="sm" className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-brand" />
-          AI features
-        </CardTitle>
-      </CardHeader>
-      <CardBody className="gap-3">
-        <Toggle
-          checked={checked}
-          disabled={!canEdit || isPending}
-          onChange={(next) => {
-            setChecked(next);
-            run(() => setCompanyAiFeatures({ companyId, enabled: next }), {
-              // Put the switch back where it was if the server refused, rather
-              // than leaving it showing a setting that isn't in effect.
-              onError: () => setChecked(!next),
-            });
-          }}
+    <Card variant="outlined">
+      <CardHeader
+        title={
+          <Stack direction="row" sx={{ alignItems: "center", gap: 1 }}>
+            <AutoAwesomeIcon fontSize="small" color="primary" />
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              AI features
+            </Typography>
+          </Stack>
+        }
+      />
+      <CardContent sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 0 }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={checked}
+              disabled={!canEdit || isPending}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setChecked(next);
+                run(() => setCompanyAiFeatures({ companyId, enabled: next }), {
+                  // Put the switch back where it was if the server refused, rather
+                  // than leaving it showing a setting that isn't in effect.
+                  onError: () => setChecked(!next),
+                });
+              }}
+            />
+          }
           label="Allow retrospective content to be sent to an AI provider"
         />
 
         {checked ? (
-          <InlineAlert tone="warning">
+          <Alert severity="warning">
             Card text from this company&apos;s retrospectives may be sent to a third-party model
             provider. Anonymous boards stay anonymous — no names or ids are ever included — but the
             words themselves leave our infrastructure.
-          </InlineAlert>
+          </Alert>
         ) : (
-          <p className="text-body-sm text-default-secondary">
-            Off. Nothing from this company&apos;s retrospectives leaves our infrastructure.
-            Insights, themes and trends are unaffected — they are computed locally and work either
-            way.
-          </p>
+          <Typography variant="body2" color="text.secondary">
+            Off. Nothing from this company&apos;s retrospectives leaves our infrastructure. Insights,
+            themes and trends are unaffected — they are computed locally and work either way.
+          </Typography>
         )}
 
         {!canEdit && (
-          <p className="text-body-tiny text-default-secondary">
+          <Typography variant="caption" color="text.secondary">
             Only a company admin can change this.
-          </p>
+          </Typography>
         )}
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }

@@ -4,13 +4,17 @@ import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Lock, Plus } from "lucide-react";
-import { Button, Textarea } from "@platned/ui";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import { alpha } from "@mui/material/styles";
 import { RetroCardItem } from "@/components/retro/retro-card-item";
 import { HiddenCardsNotice } from "@/components/retro/hidden-cards-notice";
 import { createCard } from "@/server/actions/retros";
 import type { RetroColumnWithCards, RetroCardWithRelations } from "@/server/queries/retros";
 import { useAction } from "@/lib/useAction";
-import { cn } from "@/lib/utils";
 
 type Props = {
   retrospectiveId: string;
@@ -57,26 +61,36 @@ export function RetroColumn({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <div className="flex items-center gap-2 px-1">
-        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: column.color }} />
+    <Stack spacing={2} sx={{ minWidth: 0 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", px: 0.5 }}>
+        <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: column.color, flexShrink: 0 }} />
         {/* h2, not h3: the retro title is the page's h1 and there is nothing
             between, so h3 skipped a level and broke heading navigation. */}
-        <h2 className="text-body-sm font-semibold text-default">{column.title}</h2>
-        <span className="text-body-tiny text-default-secondary">{topLevelCards.length}</span>
-      </div>
+        <Typography component="h2" variant="body2" sx={{ fontWeight: 600 }}>
+          {column.title}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {topLevelCards.length}
+        </Typography>
+      </Stack>
 
-      <div
+      <Box
         ref={setNodeRef}
-        className={cn(
-          "flex min-h-24 flex-1 flex-col gap-3 rounded-xl border border-dashed border-default bg-default-secondary p-3",
-          isOver && "border-brand bg-brand-tertiary",
-        )}
+        sx={{
+          display: "flex",
+          minHeight: 96,
+          flex: 1,
+          flexDirection: "column",
+          gap: 1.5,
+          borderRadius: 3,
+          border: 1,
+          borderStyle: "dashed",
+          borderColor: isOver ? column.color : alpha(column.color, 0.35),
+          bgcolor: isOver ? alpha(column.color, 0.12) : alpha(column.color, 0.05),
+          p: 1.5,
+        }}
       >
-        <SortableContext
-          items={topLevelCards.map((c) => c.id)}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={topLevelCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           {topLevelCards.map((card) => (
             <RetroCardItem
               key={card.id}
@@ -95,11 +109,11 @@ export function RetroColumn({
         </SortableContext>
 
         <HiddenCardsNotice count={column.hiddenCardCount} />
-      </div>
+      </Box>
 
       {canAddCards ? (
-        <form onSubmit={handleAdd} className="flex flex-col gap-2">
-          <Textarea
+        <Stack component="form" onSubmit={handleAdd} spacing={1}>
+          <TextField
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Add a card…"
@@ -108,7 +122,9 @@ export function RetroColumn({
             // reader user has no way to discover that Enter submits here when
             // it inserts a newline in every other textarea they meet.
             aria-describedby={`${column.id}-card-hint`}
-            className="min-h-16 text-body-sm"
+            multiline
+            minRows={2}
+            size="small"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -116,21 +132,23 @@ export function RetroColumn({
               }
             }}
           />
-          <p id={`${column.id}-card-hint`} className="sr-only">
+          <Typography id={`${column.id}-card-hint`} sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
             Press Enter to add the card, or Shift and Enter together for a new line.
-          </p>
-          <Button type="submit" variant="neutral" size="sm" disabled={isPending} leadingIcon={<Plus className="h-3.5 w-3.5" />}>
+          </Typography>
+          <Button type="submit" variant="outlined" size="small" disabled={isPending} startIcon={<Plus className="h-3.5 w-3.5" />}>
             Add card
           </Button>
-        </form>
+        </Stack>
       ) : (
         closedReason && (
-          <p className="flex items-center gap-1.5 px-1 text-body-tiny text-default-secondary">
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", px: 0.5 }}>
             <Lock className="h-3 w-3" />
-            {closedReason}
-          </p>
+            <Typography variant="caption" color="text.secondary">
+              {closedReason}
+            </Typography>
+          </Stack>
         )
       )}
-    </div>
+    </Stack>
   );
 }

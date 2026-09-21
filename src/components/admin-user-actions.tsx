@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, ShieldCheck, FolderKanban } from "lucide-react";
-import { IconButton } from "@platned/ui";
+import Stack from "@mui/material/Stack";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import { RenameDialog } from "@/components/rename-dialog";
 import { ManageUserProjectsDialog } from "@/components/manage-user-projects-dialog";
 import { updateUserName, updateUserGlobalRole } from "@/server/actions/users";
@@ -26,8 +28,8 @@ type Props = {
  * The admin console's row-end actions — rename, promote/demote, and manage
  * project assignments, all Super Admin only. Plain icon buttons rather than
  * a dropdown: the table's own scroll wrapper clips an absolutely-positioned
- * menu, but each button here opens a fixed-position Modal instead, which
- * isn't affected by that.
+ * menu, but each button here opens a Dialog instead, which isn't affected by
+ * that.
  */
 export function AdminUserActions({ userId, userName, role, companies, currentProjects }: Props) {
   const router = useRouter();
@@ -39,36 +41,35 @@ export function AdminUserActions({ userId, userName, role, companies, currentPro
     const nextRole: GlobalRole = role === "SUPER_ADMIN" ? "USER" : "SUPER_ADMIN";
     run(() => updateUserGlobalRole(userId, nextRole), {
       onSuccess: () =>
-        toast.success(
-          nextRole === "SUPER_ADMIN" ? "Promoted to Super Admin" : "Removed Super Admin",
-        ),
+        toast.success(nextRole === "SUPER_ADMIN" ? "Promoted to Super Admin" : "Removed Super Admin"),
     });
   }
 
   return (
     <>
-      <div className="flex items-center gap-1">
-        <IconButton aria-label={`Rename ${userName}`} variant="subtle" size="sm" onClick={() => setRenameOpen(true)}>
-          <Pencil className="size-3.5" />
-        </IconButton>
-        <IconButton
-          aria-label={role === "SUPER_ADMIN" ? `Remove Super Admin from ${userName}` : `Make ${userName} a Super Admin`}
-          variant={role === "SUPER_ADMIN" ? "primary" : "subtle"}
-          size="sm"
-          disabled={isPending}
-          onClick={toggleRole}
-        >
-          <ShieldCheck className="size-3.5" />
-        </IconButton>
-        <IconButton
-          aria-label={`Manage projects for ${userName}`}
-          variant="subtle"
-          size="sm"
-          onClick={() => setProjectsOpen(true)}
-        >
-          <FolderKanban className="size-3.5" />
-        </IconButton>
-      </div>
+      <Stack direction="row" spacing={0.5}>
+        <Tooltip title={`Rename ${userName}`}>
+          <IconButton aria-label={`Rename ${userName}`} size="small" onClick={() => setRenameOpen(true)}>
+            <Pencil size={15} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={role === "SUPER_ADMIN" ? "Remove Super Admin" : "Make Super Admin"}>
+          <IconButton
+            aria-label={role === "SUPER_ADMIN" ? `Remove Super Admin from ${userName}` : `Make ${userName} a Super Admin`}
+            size="small"
+            color={role === "SUPER_ADMIN" ? "primary" : "default"}
+            disabled={isPending}
+            onClick={toggleRole}
+          >
+            <ShieldCheck size={15} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={`Manage projects for ${userName}`}>
+          <IconButton aria-label={`Manage projects for ${userName}`} size="small" onClick={() => setProjectsOpen(true)}>
+            <FolderKanban size={15} />
+          </IconButton>
+        </Tooltip>
+      </Stack>
       {renameOpen && (
         <RenameDialog
           onClose={() => setRenameOpen(false)}

@@ -3,7 +3,9 @@
 import { useEffect, useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import Stack from "@mui/material/Stack";
+import CircularProgress from "@mui/material/CircularProgress";
+import Typography from "@mui/material/Typography";
 
 function VerifyInner() {
   const router = useRouter();
@@ -31,21 +33,24 @@ function VerifyInner() {
 
   if (status === "error") {
     return (
-      <div className="flex min-h-[80vh] flex-col items-center justify-center gap-2 p-4 text-center">
-        <p className="text-body-lg font-semibold text-default">This link is invalid or has expired.</p>
-        <p className="text-body-sm text-default-secondary">
-          Login links are single-use and expire after 12 hours. Request a new one from the
-          sign-in page.
-        </p>
-      </div>
+      <Stack spacing={1} sx={{ minHeight: "80vh", alignItems: "center", justifyContent: "center", p: 2, textAlign: "center" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          This link is invalid or has expired.
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Login links are single-use and expire after 12 hours. Request a new one from the sign-in page.
+        </Typography>
+      </Stack>
     );
   }
 
   return (
-    <div className="flex min-h-[80vh] flex-col items-center justify-center gap-2">
-      <Loader2 className="h-6 w-6 animate-spin text-default-secondary" />
-      <p className="text-body-sm text-default-secondary">Signing you in…</p>
-    </div>
+    <Stack spacing={1.5} sx={{ minHeight: "80vh", alignItems: "center", justifyContent: "center" }}>
+      <CircularProgress size={24} />
+      <Typography variant="body2" color="text.secondary">
+        Signing you in…
+      </Typography>
+    </Stack>
   );
 }
 

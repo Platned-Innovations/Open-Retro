@@ -1,20 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Button,
-  EmptyState,
-  Input,
-  Modal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  ModalTitle,
-} from "@platned/ui";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
 import { groupCards } from "@/server/actions/retros";
 import type { RetroCardWithRelations } from "@/server/queries/retros";
 import { useAction } from "@/lib/useAction";
-import { cn } from "@/lib/utils";
 
 /** Enough to scan; beyond this, typing is faster than scrolling anyway. */
 const MAX_SHOWN = 20;
@@ -47,70 +47,54 @@ export function MergeCardDialog({
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return siblingCards
-      .filter((c) => c.id !== card.id && (!q || c.content.toLowerCase().includes(q)))
-      .slice(0, MAX_SHOWN);
+    return siblingCards.filter((c) => c.id !== card.id && (!q || c.content.toLowerCase().includes(q))).slice(0, MAX_SHOWN);
   }, [siblingCards, card.id, query]);
 
   const total = siblingCards.length - 1;
 
   return (
-    <Modal isOpen onClose={onClose} label="Merge this card into another" size="sm">
-      <ModalHeader divider>
-        <ModalTitle>Merge into…</ModalTitle>
-      </ModalHeader>
-      <ModalBody className="flex flex-col gap-3">
-        <p className="text-body-sm text-default-secondary">
-          &ldquo;{card.content.slice(0, 80)}
-          {card.content.length > 80 ? "…" : ""}&rdquo; will be stacked under the card you pick.
-        </p>
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs" aria-label="Merge this card into another">
+      <DialogTitle>Merge into…</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2}>
+          <Typography variant="body2" color="text.secondary">
+            &ldquo;{card.content.slice(0, 80)}
+            {card.content.length > 80 ? "…" : ""}&rdquo; will be stacked under the card you pick.
+          </Typography>
 
-        {total > MAX_SHOWN && (
-          <Input
-            size="sm"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search this column…"
-            autoFocus
-          />
-        )}
+          {total > MAX_SHOWN && (
+            <TextField size="small" fullWidth value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search this column…" autoFocus />
+          )}
 
-        {matches.length === 0 ? (
-          <EmptyState
-            message={total === 0 ? "There is nothing else in this column yet." : "No card matches that."}
-          />
-        ) : (
-          <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
-            {matches.map((target) => (
-              <button
-                key={target.id}
-                type="button"
-                disabled={isPending}
-                onClick={() =>
-                  run(() => groupCards(retrospectiveId, card.id, target.id), { onSuccess: onClose })
-                }
-                className={cn(
-                  "rounded-md border border-default px-3 py-2 text-left text-body-sm text-default",
-                  "hover:border-brand hover:bg-brand-tertiary",
-                )}
-              >
-                {target.content}
-              </button>
-            ))}
-          </div>
-        )}
+          {matches.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
+              {total === 0 ? "There is nothing else in this column yet." : "No card matches that."}
+            </Typography>
+          ) : (
+            <List dense disablePadding sx={{ maxHeight: 288, overflowY: "auto" }}>
+              {matches.map((target) => (
+                <ListItemButton
+                  key={target.id}
+                  disabled={isPending}
+                  onClick={() => run(() => groupCards(retrospectiveId, card.id, target.id), { onSuccess: onClose })}
+                  sx={{ border: 1, borderColor: "divider", borderRadius: 1, mb: 0.5 }}
+                >
+                  <ListItemText primary={target.content} />
+                </ListItemButton>
+              ))}
+            </List>
+          )}
 
-        {total > matches.length && (
-          <p className="text-body-tiny text-default-secondary">
-            Showing {matches.length} of {total}. Type to narrow it down.
-          </p>
-        )}
-      </ModalBody>
-      <ModalFooter divider align="end">
-        <Button variant="neutral" onClick={onClose}>
-          Cancel
-        </Button>
-      </ModalFooter>
-    </Modal>
+          {total > matches.length && (
+            <Typography variant="caption" color="text.secondary">
+              Showing {matches.length} of {total}. Type to narrow it down.
+            </Typography>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+      </DialogActions>
+    </Dialog>
   );
 }
