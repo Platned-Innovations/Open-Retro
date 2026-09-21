@@ -115,7 +115,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Container
         component="main"
         maxWidth={false}
-        sx={{ flex: 1, display: "flex", flexDirection: "column", px: { xs: 2, sm: 3, md: 4 }, py: 4 }}
+        sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", px: { xs: 2, sm: 3, md: 4 }, py: 4 }}
       >
         {children}
       </Container>

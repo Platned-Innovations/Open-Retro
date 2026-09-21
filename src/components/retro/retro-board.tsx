@@ -205,7 +205,11 @@ export function RetroBoardView({
   }
 
   return (
-    <Box ref={boardRef} sx={{ position: "relative", display: "flex", flexDirection: "column", gap: 4 }} onMouseMove={handleBoardMouseMove}>
+    <Box
+      ref={boardRef}
+      sx={{ position: "relative", display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}
+      onMouseMove={handleBoardMouseMove}
+    >
       <BreadcrumbNav
         items={[
           { label: retro.project.company.name, href: `/companies/${retro.project.companyId}` },
@@ -290,6 +294,7 @@ export function RetroBoardView({
             gridAutoColumns: "minmax(18rem, 1fr)",
             gap: 2,
             overflowX: "auto",
+            minWidth: 0,
             pb: 1,
           }}
         >

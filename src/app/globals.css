@@ -101,6 +101,16 @@
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
       "Segoe UI Symbol", "Noto Color Emoji";
   }
+  html,
+  body {
+    /* A flex/grid descendant that can't shrink below its own content width
+       (the retro board's column grid, at narrow viewports) otherwise grows
+       the whole page instead of scrolling within itself, giving every page
+       a page-level horizontal scrollbar for one wide section. Panels that
+       genuinely need horizontal scroll (the board grid) declare their own
+       `overflowX: auto` and stay scrollable locally. */
+    overflow-x: hidden;
+  }
   html {
     @apply font-sans;
   }
