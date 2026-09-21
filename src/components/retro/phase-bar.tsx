@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Settings2 } from "lucide-react";
-import { Button, IconButton, InlineAlert, ProgressBar, Stepper } from "@platned/ui";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Stepper from "@mui/material/Stepper";
+import Step from "@mui/material/Step";
+import StepLabel from "@mui/material/StepLabel";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import Alert from "@mui/material/Alert";
+import LinearProgress from "@mui/material/LinearProgress";
 import { PhaseSettingsDialog } from "@/components/retro/phase-settings-dialog";
 import { stepRetroPhase } from "@/server/actions/retros";
 import type { RetroBoard } from "@/server/queries/retros";
@@ -13,9 +22,10 @@ import { useAction } from "@/lib/useAction";
  * The session's control surface: where everyone is, what this step is for, and
  * (for a moderator) how to move on.
  *
- * `Stepper` from @platned/ui is display-only — it has no click handler — which
- * suits this: jumping the group to an arbitrary step by clicking a label is
- * rarely what anyone means, so navigation is the explicit Back/Next pair.
+ * MUI's Stepper is display-only for this use — no `onClick` per step — which
+ * suits the original intent: jumping the group to an arbitrary step by
+ * clicking a label is rarely what anyone means, so navigation is the explicit
+ * Back/Next pair.
  */
 export function PhaseBar({ retro }: { retro: RetroBoard }) {
   const { run, isPending } = useAction();
@@ -24,6 +34,7 @@ export function PhaseBar({ retro }: { retro: RetroBoard }) {
   const { canModerate } = retro.viewer;
   const flow = { checkInEnabled: retro.checkInEnabled };
   const steps = toStepperSteps(retro.phase, flow);
+  const activeStep = steps.findIndex((s) => s.status === "active");
   const next = nextPhase(retro.phase, flow);
   const previous = previousPhase(retro.phase, flow);
 
@@ -31,69 +42,68 @@ export function PhaseBar({ retro }: { retro: RetroBoard }) {
   const showVoteBudget = retro.phase === "VOTE" && retro.votesRemaining !== null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-default bg-default-secondary p-4">
-      <Stepper steps={steps} />
+    <Paper variant="outlined" sx={{ p: 2.5, bgcolor: "action.hover" }}>
+      <Stack spacing={2}>
+        <Stepper activeStep={activeStep} alternativeLabel>
+          {steps.map((step) => (
+            <Step key={step.label}>
+              <StepLabel>{step.label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-body-sm text-default-secondary">{PHASE_HINTS[retro.phase]}</p>
+        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            {PHASE_HINTS[retro.phase]}
+          </Typography>
 
-        {canModerate && (
-          <div className="flex shrink-0 items-center gap-2">
-            <IconButton
-              variant="subtle"
-              size="sm"
-              aria-label="Session settings"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings2 className="h-4 w-4" />
-            </IconButton>
-            <IconButton
-              variant="neutral"
-              size="sm"
-              aria-label={previous ? `Back to ${PHASE_LABELS[previous]}` : "Already at the first step"}
-              disabled={!previous || isPending}
-              onClick={() => run(() => stepRetroPhase({ retrospectiveId: retro.id, direction: "previous" }))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </IconButton>
-            <Button
-              size="sm"
-              disabled={!next || isPending}
-              onClick={() => run(() => stepRetroPhase({ retrospectiveId: retro.id, direction: "next" }))}
-              trailingIcon={<ChevronRight className="h-3.5 w-3.5" />}
-            >
-              {next ? `Next: ${PHASE_LABELS[next]}` : "Finished"}
-            </Button>
-          </div>
+          {canModerate && (
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexShrink: 0 }}>
+              <IconButton size="small" aria-label="Session settings" onClick={() => setSettingsOpen(true)}>
+                <Settings2 className="h-4 w-4" />
+              </IconButton>
+              <IconButton
+                size="small"
+                aria-label={previous ? `Back to ${PHASE_LABELS[previous]}` : "Already at the first step"}
+                disabled={!previous || isPending}
+                onClick={() => run(() => stepRetroPhase({ retrospectiveId: retro.id, direction: "previous" }))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </IconButton>
+              <Button
+                variant="contained"
+                size="small"
+                disabled={!next || isPending}
+                onClick={() => run(() => stepRetroPhase({ retrospectiveId: retro.id, direction: "next" }))}
+                endIcon={<ChevronRight className="h-3.5 w-3.5" />}
+              >
+                {next ? `Next: ${PHASE_LABELS[next]}` : "Finished"}
+              </Button>
+            </Stack>
+          )}
+        </Stack>
+
+        {showVoteBudget && (
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+            <LinearProgress
+              variant="determinate"
+              value={retro.voteBudget === 0 ? 0 : (spent / retro.voteBudget) * 100}
+              color={retro.votesRemaining === 0 ? "warning" : "primary"}
+              aria-label={`${retro.votesRemaining} of ${retro.voteBudget} votes remaining`}
+              sx={{ width: "100%", maxWidth: 192, height: 6, borderRadius: 3 }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              {retro.votesRemaining} of {retro.voteBudget} votes left
+            </Typography>
+          </Stack>
         )}
-      </div>
 
-      {showVoteBudget && (
-        <div className="flex items-center gap-3">
-          <ProgressBar
-            value={retro.voteBudget === 0 ? 0 : (spent / retro.voteBudget) * 100}
-            tone={retro.votesRemaining === 0 ? "warning" : "brand"}
-            size="sm"
-            className="max-w-48"
-            aria-label={`${retro.votesRemaining} of ${retro.voteBudget} votes remaining`}
-          />
-          <span className="text-body-sm text-default-secondary">
-            {retro.votesRemaining} of {retro.voteBudget} votes left
-          </span>
-        </div>
-      )}
+        {/* Non-moderators get told what is happening rather than left to guess
+            why the board stopped accepting what they were doing a moment ago. */}
+        {!canModerate && retro.phase !== "CLOSED" && <Alert severity="info">The facilitator moves everyone on together.</Alert>}
 
-      {/* Non-moderators get told what is happening rather than left to guess
-          why the board stopped accepting what they were doing a moment ago. */}
-      {!canModerate && retro.phase !== "CLOSED" && (
-        <InlineAlert tone="info">
-          The facilitator moves everyone on together.
-        </InlineAlert>
-      )}
-
-      {settingsOpen && (
-        <PhaseSettingsDialog retro={retro} onClose={() => setSettingsOpen(false)} />
-      )}
-    </div>
+        {settingsOpen && <PhaseSettingsDialog retro={retro} onClose={() => setSettingsOpen(false)} />}
+      </Stack>
+    </Paper>
   );
 }

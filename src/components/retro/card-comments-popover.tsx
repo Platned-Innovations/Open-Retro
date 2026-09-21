@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { MessageCircle, Send } from "lucide-react";
-import { Button, IconButton, Input, Avatar } from "@platned/ui";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import Popover from "@mui/material/Popover";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Avatar from "@mui/material/Avatar";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import IconButton from "@mui/material/IconButton";
 import { addComment } from "@/server/actions/retros";
 import type { RetroCardWithRelations } from "@/server/queries/retros";
 import { useAction } from "@/lib/useAction";
@@ -19,6 +25,7 @@ export function CardCommentsPopover({
   canComment: boolean;
 }) {
   const [value, setValue] = useState("");
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const { run, isPending } = useAction();
 
   function handleSubmit(e: React.FormEvent) {
@@ -30,44 +37,50 @@ export function CardCommentsPopover({
   }
 
   return (
-    <Popover>
-      <PopoverTrigger
-        render={<Button variant="subtle" size="sm" leadingIcon={<MessageCircle className="h-3.5 w-3.5" />} />}
-      >
+    <>
+      <Button variant="text" size="small" startIcon={<MessageCircle className="h-3.5 w-3.5" />} onClick={(e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)}>
         {card.comments.length > 0 && card.comments.length}
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-3" align="start">
-        <div className="flex max-h-48 flex-col gap-2 overflow-y-auto">
-          {card.comments.length === 0 && (
-            <p className="text-body-tiny text-default-secondary">No comments yet.</p>
+      </Button>
+      <Popover
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <Box sx={{ width: 288, p: 1.5 }}>
+          <Stack spacing={1} sx={{ maxHeight: 192, overflowY: "auto" }}>
+            {card.comments.length === 0 && (
+              <Typography variant="caption" color="text.secondary">
+                No comments yet.
+              </Typography>
+            )}
+            {card.comments.map((comment) => {
+              const authorName = comment.authorName ?? "Anonymous";
+              return (
+                <Stack key={comment.id} direction="row" spacing={1}>
+                  <Avatar sx={{ width: 24, height: 24, fontSize: 11 }}>{authorName.slice(0, 1).toUpperCase()}</Avatar>
+                  <Typography variant="body2">
+                    <Typography component="span" variant="body2" sx={{ fontWeight: 500 }}>
+                      {authorName}
+                    </Typography>{" "}
+                    <Typography component="span" variant="body2" color="text.secondary">
+                      {comment.content}
+                    </Typography>
+                  </Typography>
+                </Stack>
+              );
+            })}
+          </Stack>
+          {canComment && (
+            <Stack component="form" onSubmit={handleSubmit} direction="row" spacing={0.5} sx={{ mt: 1.5 }}>
+              <TextField size="small" fullWidth value={value} onChange={(e) => setValue(e.target.value)} placeholder="Add a comment…" />
+              <IconButton type="submit" size="small" aria-label="Send comment" disabled={isPending}>
+                <Send className="h-3.5 w-3.5" />
+              </IconButton>
+            </Stack>
           )}
-          {card.comments.map((comment) => {
-            const authorName = comment.authorName ?? "Anonymous";
-            return (
-              <div key={comment.id} className="flex gap-2 text-body-sm">
-                <Avatar type="initial" initial={authorName.slice(0, 1).toUpperCase()} size="sm" />
-                <div>
-                  <span className="font-medium text-default">{authorName}</span>{" "}
-                  <span className="text-default-secondary">{comment.content}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {canComment && (
-          <form onSubmit={handleSubmit} className="mt-2 flex gap-1">
-            <Input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="Add a comment…"
-              className="flex-1"
-            />
-            <IconButton type="submit" aria-label="Send comment" disabled={isPending}>
-              <Send className="h-3.5 w-3.5" />
-            </IconButton>
-          </form>
-        )}
-      </PopoverContent>
-    </Popover>
+        </Box>
+      </Popover>
+    </>
   );
 }

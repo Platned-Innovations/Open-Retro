@@ -3,10 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Timer, Play, Square } from "lucide-react";
-import { Button, IconButton, Select } from "@platned/ui";
+import Stack from "@mui/material/Stack";
+import Chip from "@mui/material/Chip";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 import { startTimer, stopTimer } from "@/server/actions/retros";
 import { useAction } from "@/lib/useAction";
-import { cn } from "@/lib/utils";
 
 const PRESETS = [
   { label: "3 min", seconds: 180 },
@@ -29,41 +33,38 @@ export function RetroTimer({
 
   if (timerEndsAt) {
     return (
-      <div className="flex items-center gap-2">
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
         <Countdown key={timerEndsAt.getTime()} endsAt={timerEndsAt} onExpire={() => router.refresh()} />
         {canModerate && (
-          <IconButton
-            variant="subtle"
-            size="md"
-            aria-label="Stop timer"
-            onClick={() => run(() => stopTimer(retrospectiveId))}
-          >
+          <IconButton size="small" aria-label="Stop timer" onClick={() => run(() => stopTimer(retrospectiveId))}>
             <Square className="h-3.5 w-3.5" />
           </IconButton>
         )}
-      </div>
+      </Stack>
     );
   }
 
   if (!canModerate) return null;
 
   return (
-    <div className="flex items-center gap-2">
-      <Select
-        className="w-24"
-        options={PRESETS.map((p) => ({ value: String(p.seconds), label: p.label }))}
-        value={preset}
-        onChange={(e) => setPreset(e.target.value)}
-      />
+    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+      <TextField select size="small" value={preset} onChange={(e) => setPreset(e.target.value)} sx={{ width: 100 }}>
+        {PRESETS.map((p) => (
+          <MenuItem key={p.seconds} value={String(p.seconds)}>
+            {p.label}
+          </MenuItem>
+        ))}
+      </TextField>
       <Button
-        variant="neutral"
+        variant="outlined"
+        size="small"
         disabled={isPending}
         onClick={() => run(() => startTimer(retrospectiveId, Number(preset)))}
-        leadingIcon={<Play className="h-3.5 w-3.5" />}
+        startIcon={<Play className="h-3.5 w-3.5" />}
       >
         Start timer
       </Button>
-    </div>
+    </Stack>
   );
 }
 
@@ -115,16 +116,15 @@ function Countdown({ endsAt, onExpire }: { endsAt: Date; onExpire: () => void })
 
   const minutes = remaining !== null ? Math.floor(remaining / 60) : null;
   const seconds = remaining !== null ? remaining % 60 : null;
+  const low = remaining !== null && remaining <= 30;
 
   return (
-    <span
-      className={cn(
-        "flex h-9 items-center gap-1 rounded-full border border-default px-3 text-body-sm font-medium tabular-nums text-default",
-        remaining !== null && remaining <= 30 && "border-danger text-danger",
-      )}
-    >
-      <Timer className="h-3.5 w-3.5" />
-      {minutes !== null && seconds !== null ? `${minutes}:${seconds.toString().padStart(2, "0")}` : "--:--"}
-    </span>
+    <Chip
+      icon={<Timer className="h-3.5 w-3.5" />}
+      label={minutes !== null && seconds !== null ? `${minutes}:${seconds.toString().padStart(2, "0")}` : "--:--"}
+      color={low ? "error" : "default"}
+      variant="outlined"
+      sx={{ fontVariantNumeric: "tabular-nums" }}
+    />
   );
 }

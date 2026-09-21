@@ -12,8 +12,11 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { Button, StatusBadge, type StatusTone } from "@platned/ui";
-import { LinkButton } from "@/components/ui/link-button";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip, { type ChipProps } from "@mui/material/Chip";
+import Button from "@mui/material/Button";
 import { RetroColumn } from "@/components/retro/retro-column";
 import { PhaseBar } from "@/components/retro/phase-bar";
 import { DiscussionFocus } from "@/components/retro/discussion-focus";
@@ -25,6 +28,7 @@ import { RetroTimer } from "@/components/retro/retro-timer";
 import { PresenceAvatars } from "@/components/retro/presence-avatars";
 import { LiveCursors } from "@/components/retro/live-cursors";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
+import { NavLinkButton } from "@/components/mui/nav-link";
 import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { moveCard, setRetroStatus, deleteRetrospective } from "@/server/actions/retros";
 import type { RetroBoard as RetroBoardData, CarryOverCandidate } from "@/server/queries/retros";
@@ -36,11 +40,11 @@ import { useRetroSocket } from "@/lib/socket/useRetroSocket";
 import { useAction } from "@/lib/useAction";
 import { EyeOff, FileText, Link2, Lock, LockOpen } from "lucide-react";
 
-const STATUS_TONE: Record<string, StatusTone> = {
-  DRAFT: "neutral",
-  ACTIVE: "positive",
+const STATUS_CHIP_COLOR: Record<string, ChipProps["color"]> = {
+  DRAFT: undefined,
+  ACTIVE: "success",
   COMPLETED: "info",
-  ARCHIVED: "neutral",
+  ARCHIVED: undefined,
 };
 
 export function RetroBoardView({
@@ -72,8 +76,7 @@ export function RetroBoardView({
   // Read from the same table the server enforces, so the UI never offers an
   // action that is about to be refused. Moderators keep their bypass.
   const writable = retro.status === "ACTIVE" || canModerate;
-  const allow = (capability: RetroCapability) =>
-    writable && (canModerate || canInPhase(capability, retro));
+  const allow = (capability: RetroCapability) => writable && (canModerate || canInPhase(capability, retro));
 
   const canAddCards = allow("createCard");
   const canMoveCards = allow("moveCard");
@@ -202,7 +205,7 @@ export function RetroBoardView({
   }
 
   return (
-    <div ref={boardRef} className="relative flex flex-col gap-8" onMouseMove={handleBoardMouseMove}>
+    <Box ref={boardRef} sx={{ position: "relative", display: "flex", flexDirection: "column", gap: 4 }} onMouseMove={handleBoardMouseMove}>
       <BreadcrumbNav
         items={[
           { label: retro.project.company.name, href: `/companies/${retro.project.companyId}` },
@@ -211,48 +214,37 @@ export function RetroBoardView({
         ]}
       />
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-heading font-semibold text-default">{retro.title}</h1>
-            <StatusBadge label={retro.status} tone={STATUS_TONE[retro.status]} size="sm" />
-            {pendingActionItems > 0 && (
-              <StatusBadge label={`${pendingActionItems} pending`} tone="warning" size="sm" />
-            )}
-            {retro.isAnonymous && (
-              <StatusBadge label="Anonymous" tone="neutral" icon={<EyeOff className="h-3 w-3" />} size="sm" />
-            )}
-          </div>
-          <p className="text-body-sm text-default-secondary">
+      <Stack spacing={1.5}>
+        <Stack spacing={0.5}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              {retro.title}
+            </Typography>
+            <Chip label={retro.status} color={STATUS_CHIP_COLOR[retro.status]} size="small" />
+            {pendingActionItems > 0 && <Chip label={`${pendingActionItems} pending`} color="warning" size="small" variant="outlined" />}
+            {retro.isAnonymous && <Chip label="Anonymous" icon={<EyeOff className="h-3 w-3" />} size="small" variant="outlined" />}
+          </Stack>
+          <Typography variant="body1" color="text.secondary">
             {TEMPLATE_LABELS[retro.template]} · Facilitated by {retro.facilitatorName}
-          </p>
-        </div>
+          </Typography>
+        </Stack>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexWrap: "wrap" }}>
           <PresenceAvatars viewers={viewers} currentUserId={currentUserId} />
-          <RetroTimer
-            retrospectiveId={retro.id}
-            timerEndsAt={retro.timerEndsAt}
-            canModerate={canModerate}
-          />
-          <Button variant="neutral" onClick={handleCopyLink} leadingIcon={<Link2 className="h-3.5 w-3.5" />}>
+          <RetroTimer retrospectiveId={retro.id} timerEndsAt={retro.timerEndsAt} canModerate={canModerate} />
+          <Button variant="outlined" size="small" onClick={handleCopyLink} startIcon={<Link2 className="h-3.5 w-3.5" />}>
             Copy link
           </Button>
-          <LinkButton href={`/retros/${retro.id}/summary`} variant="neutral" leadingIcon={<FileText className="h-3.5 w-3.5" />}>
+          <NavLinkButton href={`/retros/${retro.id}/summary`} variant="outlined" size="small" startIcon={<FileText className="h-3.5 w-3.5" />}>
             Summary
-          </LinkButton>
+          </NavLinkButton>
           {canModerate && (
             <Button
-              variant="neutral"
+              variant="outlined"
+              size="small"
               disabled={isPending}
               onClick={handleToggleStatus}
-              leadingIcon={
-                retro.status === "COMPLETED" ? (
-                  <LockOpen className="h-3.5 w-3.5" />
-                ) : (
-                  <Lock className="h-3.5 w-3.5" />
-                )
-              }
+              startIcon={retro.status === "COMPLETED" ? <LockOpen className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
             >
               {retro.status === "COMPLETED" ? "Reopen" : "Complete retrospective"}
             </Button>
@@ -268,8 +260,8 @@ export function RetroBoardView({
               size="medium"
             />
           )}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       {retro.isGuided && <PhaseBar retro={retro} />}
 
@@ -278,22 +270,29 @@ export function RetroBoardView({
       )}
 
       {healthSummary && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
           <HealthCheckIn retrospectiveId={retro.id} mine={healthSummary.mine} />
           <HealthSummary summary={healthSummary} />
-        </div>
+        </Box>
       )}
 
-      {retro.isGuided && retro.phase === "DISCUSS" && (
-        <DiscussionFocus retro={retro} onCreateActionItem={setActionItemDraft} />
-      )}
+      {retro.isGuided && retro.phase === "DISCUSS" && <DiscussionFocus retro={retro} onCreateActionItem={setActionItemDraft} />}
 
       <DndContext id={`retro-${retro.id}`} sensors={sensors} onDragEnd={handleDragEnd}>
         {/* grid, not flex: auto-cols lets each column stretch to share the full
             row width evenly (matching the Action items panel below) when
             there's room, while still falling back to horizontal scroll once
             there are more columns than fit at their 18rem floor. */}
-        <div className="grid grid-flow-col auto-cols-[minmax(18rem,1fr)] gap-4 overflow-x-auto pb-2">
+        <Box
+          sx={{
+            display: "grid",
+            gridAutoFlow: "column",
+            gridAutoColumns: "minmax(18rem, 1fr)",
+            gap: 2,
+            overflowX: "auto",
+            pb: 1,
+          }}
+        >
           {retro.columns.map((column) => (
             <RetroColumn
               key={column.id}
@@ -311,7 +310,7 @@ export function RetroBoardView({
               closedReason={closedReason}
             />
           ))}
-        </div>
+        </Box>
       </DndContext>
 
       <ActionItemsPanel
@@ -323,6 +322,6 @@ export function RetroBoardView({
       />
 
       <LiveCursors cursors={cursors} />
-    </div>
+    </Box>
   );
 }

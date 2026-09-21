@@ -24,13 +24,7 @@ import { getProjectInsights } from "@/server/queries/insights";
 import { ACTION_STATUS_LABELS, ACTION_STATUS_ORDER } from "@/lib/actionItems";
 import { ACTION_STATUS_CHART_COLOR } from "@/lib/insights/tones";
 import { CHART_CATEGORICAL, CHART_DIVERGING } from "@/lib/chartPalette";
-import { HEALTH_DIMENSION_LABELS, HEALTH_SCALE_MAX, MIN_SUBMISSIONS_FOR_AVERAGE, healthTone } from "@/lib/health";
-
-const HEALTH_TONE_COLOR: Record<ReturnType<typeof healthTone>, string> = {
-  positive: "#0ca30c",
-  warning: "#fab219",
-  danger: "#d03b3b",
-};
+import { HEALTH_DIMENSION_LABELS, HEALTH_SCALE_MAX, MIN_SUBMISSIONS_FOR_AVERAGE, healthTone, HEALTH_TONE_COLOR } from "@/lib/health";
 
 function StatTile({ label, value, tone }: { label: string; value: string | number; tone?: "positive" | "warning" | "neutral" }) {
   const color = tone === "positive" ? "success.main" : tone === "warning" ? "warning.main" : "text.primary";

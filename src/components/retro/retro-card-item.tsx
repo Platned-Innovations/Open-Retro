@@ -1,25 +1,27 @@
 "use client";
 
-import { useOptimistic, useState } from "react";
+import { useOptimistic, useState, type MouseEvent } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Heart, Layers, MoreVertical, Check, X } from "lucide-react";
-import { Button, IconButton, Textarea, Avatar, StatusBadge, DropdownMenu, type DropdownMenuItem } from "@platned/ui";
+import Paper from "@mui/material/Paper";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import Avatar from "@mui/material/Avatar";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import TextField from "@mui/material/TextField";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Divider from "@mui/material/Divider";
 import { CardCommentsPopover } from "@/components/retro/card-comments-popover";
 import { MergeCardDialog } from "@/components/retro/merge-card-dialog";
-import {
-  deleteCard,
-  moveCard,
-  toggleReaction,
-  toggleVote,
-  ungroupCard,
-  updateCard,
-} from "@/server/actions/retros";
+import { deleteCard, moveCard, toggleReaction, toggleVote, ungroupCard, updateCard } from "@/server/actions/retros";
 import type { RetroCardWithRelations } from "@/server/queries/retros";
 import { REACTIONS } from "@/lib/retroReactions";
 import { useAction } from "@/lib/useAction";
-import { cn } from "@/lib/utils";
-
 
 // No `currentUserId` or `isAnonymous`: the server already decided `card.isOwn`
 // and `card.authorName`, so this component has no identity comparison to make.
@@ -43,6 +45,8 @@ type Props = {
   moveTargets: { id: string; title: string; cardCount: number }[];
 };
 
+type MenuAction = { label: string; onSelect: () => void; danger?: boolean; separatorBefore?: boolean };
+
 export function RetroCardItem({
   retrospectiveId,
   card,
@@ -55,12 +59,11 @@ export function RetroCardItem({
   canMoveCards,
   moveTargets,
 }: Props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: card.id,
-  });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id });
   const [isEditing, setIsEditing] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
   const [draft, setDraft] = useState(card.content);
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   // No `isPending` gate on the vote/react buttons any more: the optimistic
   // state already reflects the click, and disabling them mid-flight is what
   // made a fast double-click race the server in the first place.
@@ -84,8 +87,7 @@ export function RetroCardItem({
           // null means the tally is concealed during VOTE — there is no number
           // on screen to move, and inventing one would reveal what the phase is
           // deliberately withholding.
-          voteCount:
-            state.voteCount === null ? null : state.voteCount + (state.hasVoted ? -1 : 1),
+          voteCount: state.voteCount === null ? null : state.voteCount + (state.hasVoted ? -1 : 1),
         };
       }
 
@@ -96,10 +98,7 @@ export function RetroCardItem({
 
       return {
         ...state,
-        reactions:
-          nextCount > 0
-            ? [...others, { emoji: change.emoji, count: nextCount, mine: !mine }]
-            : others,
+        reactions: nextCount > 0 ? [...others, { emoji: change.emoji, count: nextCount, mine: !mine }] : others,
       };
     },
   );
@@ -120,7 +119,7 @@ export function RetroCardItem({
     setIsEditing(false);
   }
 
-  const menuItems: DropdownMenuItem[] = [{ label: "Edit", onSelect: () => setIsEditing(true) }];
+  const menuItems: MenuAction[] = [{ label: "Edit", onSelect: () => setIsEditing(true) }];
 
   /**
    * The non-drag way to move a card.
@@ -136,15 +135,7 @@ export function RetroCardItem({
       menuItems.push({
         label: `Move to: ${target.title}`,
         separatorBefore: target.id === moveTargets[0]?.id,
-        onSelect: () =>
-          run(() =>
-            moveCard({
-              retrospectiveId,
-              cardId: card.id,
-              toColumnId: target.id,
-              toIndex: target.cardCount,
-            }),
-          ),
+        onSelect: () => run(() => moveCard({ retrospectiveId, cardId: card.id, toColumnId: target.id, toIndex: target.cardCount })),
       });
     }
   }
@@ -159,95 +150,117 @@ export function RetroCardItem({
   }
   menuItems.push({
     label: "Delete",
-    tone: "danger",
+    danger: true,
     separatorBefore: true,
     onSelect: () => run(() => deleteCard(retrospectiveId, card.id)),
   });
 
   return (
-    <div
+    <Paper
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn(
-        "group flex flex-col gap-2 rounded-lg border border-default bg-default p-3 shadow-sm",
-        isDragging && "opacity-50",
+      variant="outlined"
+      className="group"
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 1,
+        p: 1.5,
+        opacity: isDragging ? 0.5 : 1,
+        transform: CSS.Transform.toString(transform),
+        transition: transition ?? undefined,
         // Everyone's board marks the same card, so "the one we're on" is never
         // ambiguous mid-discussion.
-        isUnderDiscussion && "border-brand ring-2 ring-brand/30",
-      )}
+        ...(isUnderDiscussion && { borderColor: "primary.main", borderWidth: 2, boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.light}` }),
+      }}
     >
-      <div className="flex items-start gap-2">
-        {/* `touch-none` is not cosmetic: without it the browser claims the
+      <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
+        {/* `touchAction: none` is not cosmetic: without it the browser claims the
             gesture for scrolling and a touch drag never starts at all. The
             label matters for the same reason — this was an unnamed icon
             button, so a screen reader announced nothing. */}
-        <button
+        <Box
+          component="button"
           type="button"
           {...attributes}
           {...listeners}
           aria-label={`Move card: ${card.content.slice(0, 40)}`}
-          className="mt-0.5 shrink-0 cursor-grab touch-none text-default-secondary hover:text-default active:cursor-grabbing"
+          sx={{
+            mt: 0.25,
+            flexShrink: 0,
+            cursor: "grab",
+            touchAction: "none",
+            border: "none",
+            background: "none",
+            color: "text.secondary",
+            display: "flex",
+            "&:hover": { color: "text.primary" },
+            "&:active": { cursor: "grabbing" },
+          }}
         >
           <GripVertical className="h-4 w-4" />
-        </button>
+        </Box>
 
         {isEditing ? (
-          <div className="flex flex-1 flex-col gap-2">
-            <Textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              className="min-h-16 text-body-sm"
-              autoFocus
-            />
-            <div className="flex justify-end gap-1">
-              <IconButton variant="subtle" aria-label="Cancel edit" onClick={() => setIsEditing(false)}>
+          <Stack spacing={1} sx={{ flex: 1 }}>
+            <TextField value={draft} onChange={(e) => setDraft(e.target.value)} multiline minRows={2} size="small" autoFocus />
+            <Stack direction="row" spacing={0.5} sx={{ justifyContent: "flex-end" }}>
+              <IconButton size="small" aria-label="Cancel edit" onClick={() => setIsEditing(false)}>
                 <X className="h-3.5 w-3.5" />
               </IconButton>
-              <IconButton variant="primary" aria-label="Save edit" onClick={saveEdit}>
+              <IconButton size="small" color="primary" aria-label="Save edit" onClick={saveEdit}>
                 <Check className="h-3.5 w-3.5" />
               </IconButton>
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         ) : (
-          <p className="flex-1 text-body-sm whitespace-pre-wrap text-default">{card.content}</p>
+          <Typography variant="body2" sx={{ flex: 1, whiteSpace: "pre-wrap" }}>
+            {card.content}
+          </Typography>
         )}
 
         {canEdit && !isEditing && (
-          <div className="reveal-on-hover shrink-0">
-            <DropdownMenu
-              items={menuItems}
-              label={`Card actions for "${card.content.slice(0, 30)}"`}
-              align="right"
-              trigger={<MoreVertical className="size-3.5" />}
-            />
-          </div>
+          <Box className="reveal-on-hover" sx={{ flexShrink: 0 }}>
+            <IconButton size="small" aria-label={`Card actions for "${card.content.slice(0, 30)}"`} onClick={(e: MouseEvent<HTMLElement>) => setMenuAnchor(e.currentTarget)}>
+              <MoreVertical className="size-3.5" />
+            </IconButton>
+            <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+              {menuItems.map((item, i) => [
+                item.separatorBefore && <Divider key={`${i}-divider`} />,
+                <MenuItem
+                  key={i}
+                  onClick={() => {
+                    setMenuAnchor(null);
+                    item.onSelect();
+                  }}
+                  sx={item.danger ? { color: "error.main" } : undefined}
+                >
+                  {item.label}
+                </MenuItem>,
+              ])}
+            </Menu>
+          </Box>
         )}
-      </div>
+      </Stack>
 
-      {card.grouped.length > 0 && (
-        <StatusBadge
-          tone="neutral"
-          icon={<Layers className="h-3 w-3" />}
-          label={`+${card.grouped.length} merged`}
-          size="sm"
-          className="w-fit"
-        />
-      )}
+      {card.grouped.length > 0 && <Chip icon={<Layers className="h-3 w-3" />} label={`+${card.grouped.length} merged`} size="small" sx={{ width: "fit-content" }} />}
 
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-1">
-          <Avatar type="initial" initial={authorName.slice(0, 1).toUpperCase()} size="sm" />
-          <span className="truncate text-body-tiny text-default-secondary">{authorName}</span>
-        </div>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between" }}>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", minWidth: 0, flex: 1 }}>
+          <Avatar sx={{ width: 22, height: 22, fontSize: 11 }}>{authorName.slice(0, 1).toUpperCase()}</Avatar>
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {authorName}
+          </Typography>
+        </Stack>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", flexShrink: 0 }}>
           {REACTIONS.map((emoji) => {
             const reaction = optimistic.reactions.find((r) => r.emoji === emoji);
             const count = reaction?.count ?? 0;
             const mine = reaction?.mine ?? false;
             return (
-              <button
+              <Chip
                 key={emoji}
+                component="button"
                 disabled={!canReact}
                 aria-pressed={mine}
                 aria-label={`${mine ? "Remove" : "Add"} ${emoji} reaction${count > 0 ? ` (${count})` : ""}`}
@@ -256,53 +269,37 @@ export function RetroCardItem({
                     optimistic: () => applyOptimistic({ type: "reaction", emoji }),
                   })
                 }
-                className={cn(
-                  "rounded-full px-1.5 py-0.5 text-body-tiny transition-colors",
-                  mine ? "bg-brand-tertiary" : "bg-default-secondary hover:bg-default-secondary-hover",
-                )}
-              >
-                {emoji} {count > 0 && count}
-              </button>
+                label={count > 0 ? `${emoji} ${count}` : emoji}
+                size="small"
+                color={mine ? "primary" : "default"}
+                variant={mine ? "filled" : "outlined"}
+                sx={{ cursor: canReact ? "pointer" : "default" }}
+              />
             );
           })}
 
-          <CardCommentsPopover
-            retrospectiveId={retrospectiveId}
-            card={card}
-            canComment={canComment}
-          />
+          <CardCommentsPopover retrospectiveId={retrospectiveId} card={card} canComment={canComment} />
 
           <Button
-            variant="subtle"
-            size="sm"
+            variant="text"
+            size="small"
             disabled={!canVote}
             aria-pressed={hasVoted}
-            aria-label={
-              optimistic.voteCount === null
-                ? `${hasVoted ? "Remove your vote" : "Vote"} (tally hidden until voting ends)`
-                : `${hasVoted ? "Remove your vote" : "Vote"} (${optimistic.voteCount})`
-            }
-            className={cn(hasVoted && "text-danger")}
+            aria-label={optimistic.voteCount === null ? `${hasVoted ? "Remove your vote" : "Vote"} (tally hidden until voting ends)` : `${hasVoted ? "Remove your vote" : "Vote"} (${optimistic.voteCount})`}
+            color={hasVoted ? "error" : "inherit"}
             onClick={() =>
               run(() => toggleVote(retrospectiveId, card.id), {
                 optimistic: () => applyOptimistic({ type: "vote" }),
               })
             }
-            leadingIcon={<Heart className={cn("h-3.5 w-3.5", hasVoted && "fill-current")} />}
+            startIcon={<Heart className="h-3.5 w-3.5" fill={hasVoted ? "currentColor" : "none"} />}
           >
             {optimistic.voteCount}
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
-      {isMerging && (
-        <MergeCardDialog
-          retrospectiveId={retrospectiveId}
-          card={card}
-          siblingCards={siblingCards}
-          onClose={() => setIsMerging(false)}
-        />
-      )}
-    </div>
+      {isMerging && <MergeCardDialog retrospectiveId={retrospectiveId} card={card} siblingCards={siblingCards} onClose={() => setIsMerging(false)} />}
+    </Paper>
   );
 }

@@ -1,21 +1,13 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
-import Chip, { type ChipProps } from "@mui/material/Chip";
+import Chip from "@mui/material/Chip";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { setActionItemStatus } from "@/server/actions/retros";
-import { ACTION_STATUS_LABELS, ACTION_STATUS_ORDER } from "@/lib/actionItems";
+import { ACTION_STATUS_LABELS, ACTION_STATUS_ORDER, ACTION_STATUS_CHIP_COLOR } from "@/lib/actionItems";
 import { useAction } from "@/lib/useAction";
 import type { ActionItemStatus } from "@/generated/prisma/client";
-
-const STATUS_CHIP_COLOR: Record<ActionItemStatus, ChipProps["color"]> = {
-  OPEN: "default",
-  IN_PROGRESS: "info",
-  BLOCKED: "warning",
-  DONE: "success",
-  DROPPED: "default",
-};
 
 /**
  * The only interactive part of /my-actions.
@@ -41,7 +33,7 @@ export function MyActionStatus({
     <>
       <Chip
         label={ACTION_STATUS_LABELS[status]}
-        color={STATUS_CHIP_COLOR[status]}
+        color={ACTION_STATUS_CHIP_COLOR[status]}
         size="small"
         onClick={(e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)}
         aria-label={`Change status of "${description.slice(0, 40)}"`}
