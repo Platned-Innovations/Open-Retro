@@ -1,36 +1,50 @@
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import {
-  BarChart,
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  ChartLegend,
-  DonutChart,
-  EmptyState,
-  MiniBarChart,
-  PageHeading,
-  RadialGauge,
-  RankedRow,
-  Sparkline,
-  StatTile,
-  TileGrid,
-} from "@platned/ui";
-import { ChartNoAxesColumn, HeartPulse, ListTree } from "lucide-react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Grid from "@mui/material/Grid";
+import Paper from "@mui/material/Paper";
+import Card from "@mui/material/Card";
+import CardHeader from "@mui/material/CardHeader";
+import CardContent from "@mui/material/CardContent";
+import LinearProgress from "@mui/material/LinearProgress";
+import { BarChart } from "@mui/x-charts/BarChart";
+import { PieChart } from "@mui/x-charts/PieChart";
+import { SparkLineChart } from "@mui/x-charts/SparkLineChart";
+import { Gauge, gaugeClasses } from "@mui/x-charts/Gauge";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
-import { LinkButton } from "@/components/ui/link-button";
+import { NavLinkButton } from "@/components/mui/nav-link";
 import { NotFoundError } from "@/lib/authz";
 import { getProject } from "@/server/queries/projects";
 import { getProjectInsights } from "@/server/queries/insights";
 import { ACTION_STATUS_LABELS, ACTION_STATUS_ORDER } from "@/lib/actionItems";
-import { ACTION_STATUS_CHART_TONE } from "@/lib/insights/tones";
-import {
-  HEALTH_DIMENSION_LABELS,
-  HEALTH_SCALE_MAX,
-  MIN_SUBMISSIONS_FOR_AVERAGE,
-  healthTone,
-} from "@/lib/health";
+import { ACTION_STATUS_CHART_COLOR } from "@/lib/insights/tones";
+import { CHART_CATEGORICAL, CHART_DIVERGING } from "@/lib/chartPalette";
+import { HEALTH_DIMENSION_LABELS, HEALTH_SCALE_MAX, MIN_SUBMISSIONS_FOR_AVERAGE, healthTone } from "@/lib/health";
+
+const HEALTH_TONE_COLOR: Record<ReturnType<typeof healthTone>, string> = {
+  positive: "#0ca30c",
+  warning: "#fab219",
+  danger: "#d03b3b",
+};
+
+function StatTile({ label, value, tone }: { label: string; value: string | number; tone?: "positive" | "warning" | "neutral" }) {
+  const color = tone === "positive" ? "success.main" : tone === "warning" ? "warning.main" : "text.primary";
+  return (
+    <Paper variant="outlined" sx={{ p: 2.5 }}>
+      <Typography variant="h4" sx={{ fontWeight: 700, color }}>
+        {value}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+    </Paper>
+  );
+}
 
 /**
  * What the last several retrospectives actually produced.
@@ -62,25 +76,33 @@ export default async function ProjectInsightsPage({
     limit: limit ? Number(limit) : undefined,
   });
 
+  const breadcrumb = [
+    { label: project.company.name, href: `/companies/${project.companyId}` },
+    { label: project.name, href: `/projects/${projectId}` },
+    { label: "Insights" },
+  ];
+
   // A trend needs at least two points. Drawing a "chart" of one retro implies a
   // direction that isn't there.
   if (insights.retros.length < 2) {
     return (
-      <div className="flex flex-col gap-8">
-        <BreadcrumbNav
-          items={[
-            { label: project.company.name, href: `/companies/${project.companyId}` },
-            { label: project.name, href: `/projects/${projectId}` },
-            { label: "Insights" },
-          ]}
-        />
-        <PageHeading title="Insights" subtitle={project.name} />
-        <EmptyState
-          icon={<ChartNoAxesColumn className="h-8 w-8" />}
-          message="Insights appear once this project has run its second retrospective — one board isn't a trend."
-          size="lg"
-        />
-      </div>
+      <Stack spacing={4}>
+        <BreadcrumbNav items={breadcrumb} />
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            Insights
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            {project.name}
+          </Typography>
+        </Box>
+        <Stack spacing={1.5} sx={{ py: 8, alignItems: "center", color: "text.secondary" }}>
+          <BarChartIcon sx={{ fontSize: 40, opacity: 0.5 }} />
+          <Typography variant="body1" color="text.secondary">
+            Insights appear once this project has run its second retrospective — one board isn&apos;t a trend.
+          </Typography>
+        </Stack>
+      </Stack>
     );
   }
 
@@ -91,270 +113,308 @@ export default async function ProjectInsightsPage({
   const latestParticipation = participationRate.at(-1) ?? 0;
   const previousParticipation = participationRate.at(-2) ?? latestParticipation;
 
-  const donutSegments = ACTION_STATUS_ORDER.filter(
-    (status) => insights.actionsByStatus[status] > 0,
-  ).map((status) => ({
+  const donutSegments = ACTION_STATUS_ORDER.filter((status) => insights.actionsByStatus[status] > 0).map((status) => ({
+    id: status,
     label: ACTION_STATUS_LABELS[status],
     value: insights.actionsByStatus[status],
-    tone: ACTION_STATUS_CHART_TONE[status],
+    color: ACTION_STATUS_CHART_COLOR[status],
   }));
 
-  const totalActions = ACTION_STATUS_ORDER.reduce(
-    (sum, status) => sum + insights.actionsByStatus[status],
-    0,
-  );
+  const totalActions = ACTION_STATUS_ORDER.reduce((sum, status) => sum + insights.actionsByStatus[status], 0);
+  const completionLabel = insights.completionRate === null ? "—" : `${Math.round(insights.completionRate * 100)}%`;
+
+  const maxThemeScore = Math.max(...insights.themes.map((t) => t.retroCount), 1);
 
   return (
-    <div className="flex flex-col gap-8">
-      <BreadcrumbNav
-        items={[
-          { label: project.company.name, href: `/companies/${project.companyId}` },
-          { label: project.name, href: `/projects/${projectId}` },
-          { label: "Insights" },
-        ]}
-      />
+    <Stack spacing={4}>
+      <BreadcrumbNav items={breadcrumb} />
 
-      <PageHeading
-        title="Insights"
-        subtitle={`The last ${insights.retros.length} retrospectives in ${project.name}.`}
-        actions={
-          <LinkButton href={`/projects/${projectId}`} variant="neutral" size="md">
-            Back to project
-          </LinkButton>
-        }
-      />
+      <Stack direction="row" sx={{ alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            Insights
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            The last {insights.retros.length} retrospectives in {project.name}.
+          </Typography>
+        </Box>
+        <NavLinkButton href={`/projects/${projectId}`} variant="outlined" size="small">
+          Back to project
+        </NavLinkButton>
+      </Stack>
 
-      <TileGrid columns={4}>
-        <StatTile label="Retrospectives" value={insights.retros.length} />
-        <StatTile
-          label="Participation"
-          value={`${latestParticipation}%`}
-          tone={latestParticipation >= previousParticipation ? "positive" : "warning"}
-        />
-        <StatTile
-          label="Actions completed"
-          value={
-            insights.completionRate === null ? "—" : `${Math.round(insights.completionRate * 100)}%`
-          }
-          tone={
-            insights.completionRate === null
-              ? "neutral"
-              : insights.completionRate >= 0.6
-                ? "positive"
-                : "warning"
-          }
-        />
-        <StatTile
-          label="Typically closed in"
-          value={
-            insights.medianDaysToClose === null
-              ? "—"
-              : `${Math.round(insights.medianDaysToClose)}d`
-          }
-        />
-      </TileGrid>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatTile label="Retrospectives" value={insights.retros.length} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatTile
+            label="Participation"
+            value={`${latestParticipation}%`}
+            tone={latestParticipation >= previousParticipation ? "positive" : "warning"}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatTile
+            label="Actions completed"
+            value={completionLabel}
+            tone={insights.completionRate === null ? "neutral" : insights.completionRate >= 0.6 ? "positive" : "warning"}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatTile label="Typically closed in" value={insights.medianDaysToClose === null ? "—" : `${Math.round(insights.medianDaysToClose)}d`} />
+        </Grid>
+      </Grid>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader size="sm">
-            <CardTitle size="sm">Who turned up</CardTitle>
-          </CardHeader>
-          <CardBody className="gap-3">
-            <BarChart
-              categories={labels}
-              series={[
-                {
-                  label: "Participants",
-                  values: insights.retros.map((r) => r.participantCount),
-                  tone: "brand",
-                },
-                {
-                  label: "Cards written",
-                  values: insights.retros.map((r) => r.cardCount),
-                  tone: "info",
-                },
-              ]}
-              showLabels
-              label="Participants and cards per retrospective"
-            />
-            <p className="text-body-tiny text-default-secondary">
-              Out of {insights.memberCount} project member
-              {insights.memberCount === 1 ? "" : "s"}.
-            </p>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader size="sm">
-            <CardTitle size="sm">What happened to the actions</CardTitle>
-          </CardHeader>
-          <CardBody className="flex-row items-center gap-6">
-            {totalActions === 0 ? (
-              <EmptyState message="No action items yet." />
-            ) : (
-              <>
-                <DonutChart
-                  segments={donutSegments}
-                  centerValue={
-                    insights.completionRate === null
-                      ? "—"
-                      : `${Math.round(insights.completionRate * 100)}%`
-                  }
-                  centerLabel="done"
-                  label="Action items by status"
-                />
-                <div className="flex flex-col gap-2">
-                  <ChartLegend
-                    items={donutSegments.map((s) => ({ label: `${s.label} (${s.value})`, tone: s.tone }))}
-                    orientation="vertical"
-                  />
-                  {/* Dropped work is excluded from the rate on purpose — deciding
-                      not to do something is a real outcome, not a failure. */}
-                  {insights.actionsByStatus.DROPPED > 0 && (
-                    <p className="text-body-tiny text-default-secondary">
-                      Dropped items aren&apos;t counted in the completion rate.
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader size="sm">
-            <CardTitle size="sm">Engagement</CardTitle>
-          </CardHeader>
-          <CardBody className="gap-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-body-tiny text-default-secondary">Votes cast</span>
-              <Sparkline
-                data={insights.retros.map((r) => r.voteCount)}
-                variant="area"
-                tone="brand"
-                showEndDot
-                label="Votes cast per retrospective"
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Card variant="outlined">
+            <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Who turned up</Typography>} />
+            <CardContent sx={{ pt: 0 }}>
+              <BarChart
+                height={240}
+                xAxis={[{ scaleType: "band", data: labels }]}
+                series={[
+                  { label: "Participants", data: insights.retros.map((r) => r.participantCount), color: CHART_CATEGORICAL[0] },
+                  { label: "Cards written", data: insights.retros.map((r) => r.cardCount), color: CHART_CATEGORICAL[1] },
+                ]}
+                borderRadius={4}
               />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-body-tiny text-default-secondary">
-                Board sentiment — positive versus negative cards
-              </span>
-              <MiniBarChart
-                bars={insights.retros.map((r) => Math.round(((r.sentimentScore ?? 0) + 1) * 50))}
-                highlight={-1}
-                label="Sentiment per retrospective"
-              />
-            </div>
-          </CardBody>
-        </Card>
+              <Typography variant="caption" color="text.secondary">
+                Out of {insights.memberCount} project member{insights.memberCount === 1 ? "" : "s"}.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <Card>
-          <CardHeader size="sm">
-            <CardTitle size="sm">Follow-through</CardTitle>
-          </CardHeader>
-          <CardBody className="gap-3">
-            <div className="flex flex-col gap-1 text-body-sm">
-              <span className="text-default">
-                {insights.carriedOverCount} item
-                {insights.carriedOverCount === 1 ? " has" : "s have"} been carried into a later
-                retrospective.
-              </span>
-              {insights.stalledCount > 0 && (
-                <span className="text-warning">
-                  {insights.stalledCount} of those {insights.stalledCount === 1 ? "is" : "are"} still
-                  outstanding.
-                </span>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Card variant="outlined">
+            <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>What happened to the actions</Typography>} />
+            <CardContent sx={{ pt: 0 }}>
+              {totalActions === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+                  No action items yet.
+                </Typography>
+              ) : (
+                <Stack direction="row" spacing={3} sx={{ alignItems: "center" }}>
+                  <Box sx={{ position: "relative", width: 160, height: 160, flexShrink: 0 }}>
+                    <PieChart
+                      series={[{ data: donutSegments, innerRadius: 45, outerRadius: 78, paddingAngle: 2, cornerRadius: 3 }]}
+                      width={160}
+                      height={160}
+                      hideLegend
+                      slotProps={{ tooltip: { trigger: "item" } }}
+                    />
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        {completionLabel}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        done
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Stack spacing={0.75} sx={{ flex: 1 }}>
+                    {donutSegments.map((s) => (
+                      <Stack key={s.id} direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: s.color, flexShrink: 0 }} />
+                        <Typography variant="body2">
+                          {s.label} ({s.value})
+                        </Typography>
+                      </Stack>
+                    ))}
+                    {/* Dropped work is excluded from the rate on purpose — deciding
+                        not to do something is a real outcome, not a failure. */}
+                    {insights.actionsByStatus.DROPPED > 0 && (
+                      <Typography variant="caption" color="text.secondary">
+                        Dropped items aren&apos;t counted in the completion rate.
+                      </Typography>
+                    )}
+                  </Stack>
+                </Stack>
               )}
-            </div>
-            <p className="text-body-tiny text-default-secondary">
-              Work that keeps reappearing is usually blocked on something the retro hasn&apos;t
-              named yet.
-            </p>
-          </CardBody>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Card variant="outlined">
+            <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Engagement</Typography>} />
+            <CardContent sx={{ pt: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Votes cast
+                </Typography>
+                <SparkLineChart
+                  data={insights.retros.map((r) => r.voteCount)}
+                  height={60}
+                  area
+                  showHighlight
+                  color={CHART_CATEGORICAL[0]}
+                />
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Board sentiment — positive versus negative cards
+                </Typography>
+                <BarChart
+                  height={70}
+                  xAxis={[{ scaleType: "band", data: labels, position: "none" }]}
+                  yAxis={[{ min: -50, max: 50, position: "none" }]}
+                  series={[
+                    {
+                      data: insights.retros.map((r) => Math.round((r.sentimentScore ?? 0) * 50)),
+                      color: CHART_DIVERGING.positive,
+                    },
+                  ]}
+                  borderRadius={3}
+                  hideLegend
+                  grid={{ horizontal: false }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Card variant="outlined">
+            <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Follow-through</Typography>} />
+            <CardContent sx={{ pt: 0 }}>
+              <Stack spacing={1}>
+                <Typography variant="body2">
+                  {insights.carriedOverCount} item{insights.carriedOverCount === 1 ? " has" : "s have"} been carried into a later
+                  retrospective.
+                </Typography>
+                {insights.stalledCount > 0 && (
+                  <Typography variant="body2" color="warning.main">
+                    {insights.stalledCount} of those {insights.stalledCount === 1 ? "is" : "are"} still outstanding.
+                  </Typography>
+                )}
+                <Typography variant="caption" color="text.secondary">
+                  Work that keeps reappearing is usually blocked on something the retro hasn&apos;t named yet.
+                </Typography>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       {/* Hidden outright when no retro had enough answers, rather than drawn as
           a flat line at zero — an empty chart reads as "morale is nil". */}
       {insights.health.trends.length > 0 && (
-        <div>
-          <h2 className="mb-3 flex items-center gap-2 text-heading-sm font-semibold text-default">
-            <HeartPulse className="h-4 w-4" />
-            Team health
-          </h2>
-          <Card>
-            <CardBody className="flex-row flex-wrap gap-8">
+        <Box>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1.5 }}>
+            <FavoriteBorderIcon fontSize="small" />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Team health
+            </Typography>
+          </Stack>
+          <Paper variant="outlined" sx={{ p: 3 }}>
+            <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap" }}>
               {insights.health.trends.map((trend) => {
                 const latest = trend.points.at(-1)?.average ?? 0;
+                const tone = healthTone(latest);
                 return (
-                  <div key={trend.dimension} className="flex flex-col items-center gap-2">
-                    <RadialGauge
+                  <Stack key={trend.dimension} spacing={1} sx={{ alignItems: "center" }}>
+                    <Gauge
                       value={latest}
-                      max={HEALTH_SCALE_MAX}
-                      sweep={270}
-                      tone={healthTone(latest)}
-                      centerLabel={HEALTH_DIMENSION_LABELS[trend.dimension]}
-                      label={`${HEALTH_DIMENSION_LABELS[trend.dimension]}: ${latest.toFixed(1)} out of ${HEALTH_SCALE_MAX} in the latest retrospective`}
-                    >
-                      {latest.toFixed(1)}
-                    </RadialGauge>
+                      valueMin={0}
+                      valueMax={HEALTH_SCALE_MAX}
+                      startAngle={-135}
+                      endAngle={135}
+                      width={120}
+                      height={120}
+                      cornerRadius="50%"
+                      text={`${latest.toFixed(1)}`}
+                      sx={{
+                        [`& .${gaugeClasses.valueArc}`]: { fill: HEALTH_TONE_COLOR[tone] },
+                        [`& .${gaugeClasses.valueText} text`]: { fontSize: 20, fontWeight: 700 },
+                      }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      {HEALTH_DIMENSION_LABELS[trend.dimension]}
+                    </Typography>
                     {trend.points.length > 1 && (
-                      <Sparkline
+                      <SparkLineChart
                         data={trend.points.map((p) => p.average)}
-                        tone={healthTone(latest)}
-                        showEndDot
-                        label={`${HEALTH_DIMENSION_LABELS[trend.dimension]} over ${trend.points.length} retrospectives`}
+                        width={100}
+                        height={32}
+                        showHighlight
+                        color={HEALTH_TONE_COLOR[tone]}
                       />
                     )}
-                  </div>
+                  </Stack>
                 );
               })}
-            </CardBody>
-          </Card>
-          <p className="mt-2 text-body-tiny text-default-secondary">
-            Anonymous check-ins, averaged. A retrospective is only shown once at least{" "}
-            {MIN_SUBMISSIONS_FOR_AVERAGE} people answered it
+            </Stack>
+          </Paper>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+            Anonymous check-ins, averaged. A retrospective is only shown once at least {MIN_SUBMISSIONS_FOR_AVERAGE} people answered it
             {insights.health.suppressedRetros > 0 && (
               <>
-                {" "}— {insights.health.suppressedRetros}{" "}
-                {insights.health.suppressedRetros === 1 ? "is" : "are"} left out on that basis, so
+                {" "}
+                — {insights.health.suppressedRetros} {insights.health.suppressedRetros === 1 ? "is" : "are"} left out on that basis, so
                 the points are not evenly spaced in time
               </>
             )}
             .
-          </p>
-        </div>
+          </Typography>
+        </Box>
       )}
 
-      <div>
-        <h2 className="mb-3 flex items-center gap-2 text-heading-sm font-semibold text-default">
-          <ListTree className="h-4 w-4" />
-          Recurring themes
-        </h2>
+      <Box>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1.5 }}>
+          <AccountTreeIcon fontSize="small" />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Recurring themes
+          </Typography>
+        </Stack>
         {insights.themes.length === 0 ? (
-          <EmptyState message="No wording has recurred across enough retrospectives yet." />
+          <Typography variant="body2" color="text.secondary">
+            No wording has recurred across enough retrospectives yet.
+          </Typography>
         ) : (
-          <Card>
-            <CardBody size="sm" className="flex flex-col gap-0 divide-y divide-divider p-0">
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Stack spacing={1.5}>
               {insights.themes.map((theme, index) => (
-                <RankedRow
-                  key={theme.term}
-                  rank={index + 1}
-                  name={theme.term}
-                  sublabel={`${theme.retroCount} retrospectives · ${theme.cardCount} cards`}
-                  score={theme.retroCount}
-                  tone="auto"
-                />
+                <Stack key={theme.term} direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ width: 20, textAlign: "right" }}>
+                    {index + 1}
+                  </Typography>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
+                        {theme.term}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {theme.retroCount} retrospectives · {theme.cardCount} cards
+                      </Typography>
+                    </Stack>
+                    <LinearProgress
+                      variant="determinate"
+                      value={(theme.retroCount / maxThemeScore) * 100}
+                      sx={{ height: 4, borderRadius: 2, mt: 0.5, [`& .MuiLinearProgress-bar`]: { bgcolor: CHART_CATEGORICAL[0] } }}
+                    />
+                  </Box>
+                </Stack>
               ))}
-            </CardBody>
-          </Card>
+            </Stack>
+          </Paper>
         )}
-        <p className="mt-2 text-body-tiny text-default-secondary">
-          Repeated wording across boards, ranked by how many retrospectives mention it — a prompt to
-          look closer, not an analysis.
-        </p>
-      </div>
-    </div>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+          Repeated wording across boards, ranked by how many retrospectives mention it — a prompt to look closer, not an analysis.
+        </Typography>
+      </Box>
+    </Stack>
   );
 }
