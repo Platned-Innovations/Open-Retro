@@ -1,10 +1,34 @@
+import { format } from "date-fns";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Grid from "@mui/material/Grid";
+import Paper from "@mui/material/Paper";
+import Chip from "@mui/material/Chip";
+import TableContainer from "@mui/material/TableContainer";
+import Table from "@mui/material/Table";
+import TableHead from "@mui/material/TableHead";
+import TableBody from "@mui/material/TableBody";
+import TableRow from "@mui/material/TableRow";
+import TableCell from "@mui/material/TableCell";
 import { listAllUsers, listCompaniesAndProjectsForFilters } from "@/server/queries/users";
 import { listCompanies } from "@/server/queries/companies";
 import { AdminFilters } from "@/components/admin-filters";
 import { Pagination } from "@/components/ui/pagination";
 import { AdminUserActions } from "@/components/admin-user-actions";
-import { PageHeading, TileGrid, StatTile, RoleBadge, Badge, Card, DataTable } from "@platned/ui";
-import { format } from "date-fns";
+
+function StatTile({ label, value }: { label: string; value: number }) {
+  return (
+    <Paper variant="outlined" sx={{ p: 2.5 }}>
+      <Typography variant="h3" sx={{ fontWeight: 700 }}>
+        {value}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+    </Paper>
+  );
+}
 
 export default async function AdminPage({
   searchParams,
@@ -19,105 +43,116 @@ export default async function AdminPage({
   ]);
 
   return (
-    <div className="flex flex-col gap-8">
-      <PageHeading title="Platform admin" subtitle="All users, companies, and projects across Agile Retro." />
+    <Stack spacing={4}>
+      <Box>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          Platform admin
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          All users, companies, and projects across Agile Retro.
+        </Typography>
+      </Box>
 
-      <TileGrid columns={3}>
-        <StatTile label="Companies" value={companies.length} />
-        <StatTile label="Projects" value={companies.reduce((sum, c) => sum + c._count.projects, 0)} />
-        <StatTile label="Users" value={userPage.total} />
-      </TileGrid>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatTile label="Companies" value={companies.length} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatTile label="Projects" value={companies.reduce((sum, c) => sum + c._count.projects, 0)} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatTile label="Users" value={userPage.total} />
+        </Grid>
+      </Grid>
 
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-heading-sm font-semibold text-default">Users</h2>
+      <Stack spacing={2}>
+        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Users
+          </Typography>
           <AdminFilters companies={filterOptions} />
-        </div>
+        </Stack>
 
-        <Card>
-          <DataTable
-            columns={[
-              {
-                key: "name",
-                header: "Name",
-                width: "160px",
-                render: (u) => (
-                  <span className="block truncate font-medium" title={u.name}>
-                    {u.name}
-                  </span>
-                ),
-              },
-              { key: "email", header: "Email", width: "220px", grow: true, render: (u) => <span className="text-default-secondary">{u.email}</span> },
-              {
-                key: "role",
-                header: "Role",
-                width: "120px",
-                render: (u) => <RoleBadge role={u.role === "SUPER_ADMIN" ? "Super Admin" : "User"} size="sm" />,
-              },
-              {
-                key: "companies",
-                header: "Companies",
-                width: "200px",
-                render: (u) => (
-                  <div className="flex flex-wrap gap-1">
-                    {u.companyMemberships.map((m) => (
-                      <Badge
-                        key={m.id}
-                        label={m.role === "ADMIN" ? `${m.company.name} · Admin` : m.company.name}
-                        color={m.role === "ADMIN" ? "blue" : "gray"}
-                        size="sm"
+        <TableContainer component={Paper} variant="outlined">
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>Companies</TableCell>
+                <TableCell>Projects</TableCell>
+                <TableCell>Joined</TableCell>
+                <TableCell />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {userPage.users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                    No users match this filter.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                userPage.users.map((u) => (
+                  <TableRow key={u.id} hover>
+                    <TableCell sx={{ fontWeight: 500 }} title={u.name}>
+                      {u.name}
+                    </TableCell>
+                    <TableCell sx={{ color: "text.secondary" }}>{u.email}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={u.role === "SUPER_ADMIN" ? "Super Admin" : "User"}
+                        color={u.role === "SUPER_ADMIN" ? "primary" : "default"}
+                        size="small"
                       />
-                    ))}
-                  </div>
-                ),
-              },
-              {
-                key: "projects",
-                header: "Projects",
-                width: "200px",
-                render: (u) => (
-                  <div className="flex flex-wrap gap-1">
-                    {u.projectMemberships.map((m) => (
-                      <Badge
-                        key={m.id}
-                        label={m.role === "ADMIN" ? `${m.project.name} · Admin` : m.project.name}
-                        color={m.role === "ADMIN" ? "blue" : "gray"}
-                        size="sm"
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                        {u.companyMemberships.map((m) => (
+                          <Chip
+                            key={m.id}
+                            label={m.role === "ADMIN" ? `${m.company.name} · Admin` : m.company.name}
+                            color={m.role === "ADMIN" ? "primary" : "default"}
+                            variant="outlined"
+                            size="small"
+                          />
+                        ))}
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                        {u.projectMemberships.map((m) => (
+                          <Chip
+                            key={m.id}
+                            label={m.role === "ADMIN" ? `${m.project.name} · Admin` : m.project.name}
+                            color={m.role === "ADMIN" ? "primary" : "default"}
+                            variant="outlined"
+                            size="small"
+                          />
+                        ))}
+                      </Stack>
+                    </TableCell>
+                    <TableCell sx={{ color: "text.secondary" }}>{format(u.createdAt, "MMM d, yyyy")}</TableCell>
+                    <TableCell align="right">
+                      <AdminUserActions
+                        userId={u.id}
+                        userName={u.name}
+                        role={u.role}
+                        companies={filterOptions}
+                        currentProjects={u.projectMemberships.map((m) => ({
+                          id: m.project.id,
+                          name: m.project.name,
+                          companyName: m.project.company.name,
+                        }))}
                       />
-                    ))}
-                  </div>
-                ),
-              },
-              {
-                key: "joined",
-                header: "Joined",
-                width: "120px",
-                render: (u) => <span className="text-default-secondary">{format(u.createdAt, "MMM d, yyyy")}</span>,
-              },
-              {
-                key: "actions",
-                header: "",
-                width: "100px",
-                render: (u) => (
-                  <AdminUserActions
-                    userId={u.id}
-                    userName={u.name}
-                    role={u.role}
-                    companies={filterOptions}
-                    currentProjects={u.projectMemberships.map((m) => ({
-                      id: m.project.id,
-                      name: m.project.name,
-                      companyName: m.project.company.name,
-                    }))}
-                  />
-                ),
-              },
-            ]}
-            rows={userPage.users}
-            getRowKey={(u) => u.id}
-            emptyLabel="No users match this filter."
-          />
-        </Card>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
         <Pagination
           basePath="/admin"
@@ -126,7 +161,7 @@ export default async function AdminPage({
           pageCount={userPage.pageCount}
           label="users"
         />
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
