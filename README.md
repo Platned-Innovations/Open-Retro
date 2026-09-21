@@ -248,15 +248,26 @@ App — `.github/workflows/ci.yml` deploys nothing from the upstream repo itself
      `.bin` symlink, sidestepping the whole class of bug. Production only ever runs on Linux, so
      the plain shell env-var syntax is fine too.
 
-   > **Do not set `WEBSITE_RUN_FROM_PACKAGE`.** This app starts via `tsx server.ts`, not
-   > `next start`, so it needs a writable `.next` on disk at runtime (Next's file-system cache
-   > writes there) even when the deployment itself is pre-built. Run-from-package mounts a
-   > read-only package instead, which breaks that — found out the hard way.
-
 3. **Application settings** — add every row from the table above as an Application Setting,
    **including `AUTO_MIGRATE=true`** (the default — nothing else applies migrations, since the
    pipeline deliberately doesn't). Set `APP_URL` to the real
    `https://<your-app>.azurewebsites.net` or custom domain.
+
+   Also add **`WEBSITE_RUN_FROM_PACKAGE=1`**. Without it, Kudu re-compresses and re-extracts the
+   entire `node_modules` on every deploy *and every container start* — 20-25s of CPU each time,
+   which on a constrained plan (Free F1's 60 CPU-minutes/day, for one) a handful of restarts can
+   exhaust outright, and which was separately observed corrupting `.bin/` shim symlinks in the
+   process. `WEBSITE_RUN_FROM_PACKAGE` mounts the deployed zip directly instead of re-processing
+   it — instant startup, nothing to corrupt.
+   >
+   > This only works because the app doesn't write to its own deployment directory at runtime —
+   > `images.unoptimized` in `next.config.ts` turns off the one thing that did (next/image's
+   > optimizer cache) specifically so this mount can be read-only. It also only works because this
+   > pipeline builds in GitHub Actions and ships a finished app: run-from-package's mount is
+   > read-only, so pairing it with a *server-side* build (Oryx installing/building into that same
+   > directory) breaks outright — don't reintroduce `SCM_DO_BUILD_DURING_DEPLOYMENT=true` alongside
+   > this setting. If the app ever needs to write to disk at runtime again, this is the setting to
+   > revisit first.
 
 4. **Enable WebSockets** — Configuration → General settings → **Web sockets: On**. Without it
    Socket.IO falls back to polling or fails outright.
