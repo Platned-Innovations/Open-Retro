@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Select } from "@platned/ui";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 
 type CompanyOption = { id: string; name: string; projects: { id: string; name: string }[] };
 
@@ -36,29 +38,38 @@ export function AdminFilters({ companies }: { companies: CompanyOption[] }) {
   }
 
   return (
-    <div className="flex flex-wrap gap-3">
-      <Select
-        className="w-[220px]"
-        options={[
-          { value: ALL, label: "All companies" },
-          ...companies.map((c) => ({ value: c.id, label: c.name })),
-        ]}
+    <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap" }}>
+      <TextField
+        select
+        size="small"
+        label="Company"
+        sx={{ width: 220 }}
         value={companyId}
         onChange={(e) => setParam("companyId", e.target.value)}
-      />
+      >
+        <MenuItem value={ALL}>All companies</MenuItem>
+        {companies.map((c) => (
+          <MenuItem key={c.id} value={c.id}>
+            {c.name}
+          </MenuItem>
+        ))}
+      </TextField>
 
-      <Select
-        className="w-[220px]"
-        options={[
-          { value: ALL, label: "All projects" },
-          ...projectOptions.map((p) => ({
-            value: p.id,
-            label: p.companyName ? `${p.companyName} / ${p.name}` : p.name,
-          })),
-        ]}
+      <TextField
+        select
+        size="small"
+        label="Project"
+        sx={{ width: 220 }}
         value={projectId}
         onChange={(e) => setParam("projectId", e.target.value)}
-      />
-    </div>
+      >
+        <MenuItem value={ALL}>All projects</MenuItem>
+        {projectOptions.map((p) => (
+          <MenuItem key={p.id} value={p.id}>
+            {p.companyName ? `${p.companyName} / ${p.name}` : p.name}
+          </MenuItem>
+        ))}
+      </TextField>
+    </Stack>
   );
 }

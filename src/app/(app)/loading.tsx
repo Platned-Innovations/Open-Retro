@@ -1,4 +1,6 @@
-import { EmptyState } from "@platned/ui";
+import Stack from "@mui/material/Stack";
+import CircularProgress from "@mui/material/CircularProgress";
+import Typography from "@mui/material/Typography";
 
 /**
  * One loading state for every page in the app shell.
@@ -13,5 +15,12 @@ import { EmptyState } from "@platned/ui";
  * look like the click did nothing.
  */
 export default function Loading() {
-  return <EmptyState variant="loading" message="Loading…" size="lg" />;
+  return (
+    <Stack spacing={2} sx={{ minHeight: "60vh", alignItems: "center", justifyContent: "center" }}>
+      <CircularProgress />
+      <Typography variant="body2" color="text.secondary">
+        Loading…
+      </Typography>
+    </Stack>
+  );
 }

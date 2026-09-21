@@ -1,14 +1,20 @@
+"use client";
+
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import MuiPagination from "@mui/material/Pagination";
+import PaginationItem from "@mui/material/PaginationItem";
 
 /**
- * Prev/next paging as plain links.
+ * Numbered paging, not just prev/next — MUI's own Pagination pattern, more
+ * useful than two arrows once there's more than a couple of pages.
  *
- * Deliberately not a client component: the pages using it are server-rendered
- * from `searchParams`, so paging is a navigation rather than a fetch. That
- * keeps the whole list off the client bundle, which was the point of
- * paginating in the first place.
+ * A client component now (MUI's Pagination is one), where the plain-link
+ * version used to avoid that on purpose. Each page number still renders as a
+ * real `<a href>` via `renderItem`, so navigation itself stays a normal page
+ * load driven by `searchParams` — only the control's own rendering needs the
+ * client bundle now, not the list it's paging through.
  *
  * `params` carries the page's other query values through, so paging doesn't
  * silently drop the filter someone just set.
@@ -41,35 +47,23 @@ export function Pagination({
     return search ? `${basePath}?${search}` : basePath;
   }
 
-  const linkClass =
-    "flex items-center gap-1 rounded-md border border-default px-2.5 py-1.5 text-body-sm text-default transition-colors hover:bg-default-secondary";
-  const disabledClass = "pointer-events-none opacity-40";
-
   return (
-    <nav className="flex items-center justify-between gap-3" aria-label={`${label} pages`}>
-      <Link
-        href={href(page - 1)}
-        aria-disabled={page <= 1}
-        tabIndex={page <= 1 ? -1 : undefined}
-        className={cn(linkClass, page <= 1 && disabledClass)}
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        Previous
-      </Link>
-
-      <span className="text-body-sm text-default-secondary">
+    <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }} aria-label={`${label} pages`}>
+      <Typography variant="body2" color="text.secondary">
         Page {page} of {pageCount}
-      </span>
-
-      <Link
-        href={href(page + 1)}
-        aria-disabled={page >= pageCount}
-        tabIndex={page >= pageCount ? -1 : undefined}
-        className={cn(linkClass, page >= pageCount && disabledClass)}
-      >
-        Next
-        <ChevronRight className="h-3.5 w-3.5" />
-      </Link>
-    </nav>
+      </Typography>
+      <MuiPagination
+        count={pageCount}
+        page={page}
+        shape="rounded"
+        renderItem={(item) => (
+          <PaginationItem
+            component={Link}
+            href={href(item.page ?? 1)}
+            {...item}
+          />
+        )}
+      />
+    </Stack>
   );
 }

@@ -3,18 +3,17 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { History } from "lucide-react";
-import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  Checkbox,
-  EmptyState,
-  StatusBadge,
-} from "@platned/ui";
+import Card from "@mui/material/Card";
+import CardHeader from "@mui/material/CardHeader";
+import CardContent from "@mui/material/CardContent";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import { carryOverActionItems } from "@/server/actions/retros";
-import { ACTION_STATUS_LABELS, ACTION_STATUS_TONE } from "@/lib/actionItems";
+import { ACTION_STATUS_LABELS, ACTION_STATUS_CHIP_COLOR } from "@/lib/actionItems";
 import { useAction } from "@/lib/useAction";
 import type { CarryOverCandidate } from "@/server/queries/retros";
 
@@ -26,13 +25,7 @@ import type { CarryOverCandidate } from "@/server/queries/retros";
  * new board — by reference, so there is still only one of each — is what turns
  * a list of good intentions into something the team has to answer for.
  */
-export function CarryOverPanel({
-  retrospectiveId,
-  candidates,
-}: {
-  retrospectiveId: string;
-  candidates: CarryOverCandidate[];
-}) {
+export function CarryOverPanel({ retrospectiveId, candidates }: { retrospectiveId: string; candidates: CarryOverCandidate[] }) {
   const { run, isPending } = useAction();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -46,75 +39,69 @@ export function CarryOverPanel({
   }
 
   return (
-    <Card className="overflow-visible">
-      <CardHeader>
-        <CardTitle size="md" className="flex items-center gap-2">
-          <History className="h-4 w-4" />
-          Unfinished from earlier retros
-        </CardTitle>
-      </CardHeader>
-      <CardBody className="gap-3">
+    <Card variant="outlined">
+      <CardHeader
+        title={
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <History className="h-4 w-4" />
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Unfinished from earlier retros
+            </Typography>
+          </Stack>
+        }
+      />
+      <CardContent sx={{ pt: 0 }}>
         {candidates.length === 0 ? (
-          <EmptyState message="Nothing outstanding from this project's earlier retrospectives." />
+          <Typography variant="body2" color="text.secondary">
+            Nothing outstanding from this project&apos;s earlier retrospectives.
+          </Typography>
         ) : (
-          <>
-            <div className="flex flex-col gap-1">
+          <Stack spacing={2}>
+            <Stack spacing={0.5}>
               {candidates.map((item) => (
-                <label
+                <FormControlLabel
                   key={item.id}
-                  className="flex cursor-pointer items-start gap-2 rounded-md p-1.5 hover:bg-default-secondary"
-                >
-                  <Checkbox
-                    checked={selected.has(item.id)}
-                    onChange={() => toggle(item.id)}
-                    className="mt-0.5"
-                  />
-                  <span className="flex flex-1 flex-wrap items-center gap-1.5 text-body-sm">
-                    <span className="text-default">{item.description}</span>
-                    <StatusBadge
-                      label={ACTION_STATUS_LABELS[item.status]}
-                      tone={ACTION_STATUS_TONE[item.status]}
-                      size="sm"
-                    />
-                    <span className="text-body-tiny text-default-secondary">
-                      from {item.retrospective.title}
-                      {item.dueDate && ` · due ${format(item.dueDate, "MMM d")}`}
-                      {item.assignees.length > 0 &&
-                        ` · ${item.assignees.map((a) => a.user.name).join(", ")}`}
-                    </span>
-                    {item._count.carryOvers > 0 && (
-                      <StatusBadge
-                        label={`already carried ×${item._count.carryOvers}`}
-                        tone={item._count.carryOvers > 2 ? "warning" : "neutral"}
-                        size="sm"
-                      />
-                    )}
-                  </span>
-                </label>
+                  sx={{ alignItems: "flex-start", m: 0, borderRadius: 1, p: 0.5, "&:hover": { bgcolor: "action.hover" } }}
+                  control={<Checkbox checked={selected.has(item.id)} onChange={() => toggle(item.id)} sx={{ mt: -0.5 }} />}
+                  label={
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", alignItems: "center" }}>
+                      <Typography variant="body2">{item.description}</Typography>
+                      <Chip label={ACTION_STATUS_LABELS[item.status]} color={ACTION_STATUS_CHIP_COLOR[item.status]} size="small" />
+                      <Typography variant="caption" color="text.secondary">
+                        from {item.retrospective.title}
+                        {item.dueDate && ` · due ${format(item.dueDate, "MMM d")}`}
+                        {item.assignees.length > 0 && ` · ${item.assignees.map((a) => a.user.name).join(", ")}`}
+                      </Typography>
+                      {item._count.carryOvers > 0 && (
+                        <Chip
+                          label={`already carried ×${item._count.carryOvers}`}
+                          color={item._count.carryOvers > 2 ? "warning" : "default"}
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                    </Stack>
+                  }
+                />
               ))}
-            </div>
+            </Stack>
 
             <Button
-              size="sm"
+              variant="contained"
+              size="small"
+              sx={{ alignSelf: "flex-start" }}
               disabled={selected.size === 0 || isPending}
               onClick={() =>
-                run(
-                  () =>
-                    carryOverActionItems({
-                      retrospectiveId,
-                      actionItemIds: [...selected],
-                    }),
-                  { onSuccess: () => setSelected(new Set()) },
-                )
+                run(() => carryOverActionItems({ retrospectiveId, actionItemIds: [...selected] }), {
+                  onSuccess: () => setSelected(new Set()),
+                })
               }
             >
-              {selected.size === 0
-                ? "Carry over"
-                : `Carry over ${selected.size} item${selected.size === 1 ? "" : "s"}`}
+              {selected.size === 0 ? "Carry over" : `Carry over ${selected.size} item${selected.size === 1 ? "" : "s"}`}
             </Button>
-          </>
+          </Stack>
         )}
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }

@@ -82,6 +82,16 @@ export function healthTone(average: number): "danger" | "warning" | "positive" {
 }
 
 /**
+ * Chart color for each tone — the dataviz skill's reserved status palette,
+ * since a health average is a genuine state indicator, not categorical data.
+ */
+export const HEALTH_TONE_COLOR: Record<ReturnType<typeof healthTone>, string> = {
+  positive: "#0ca30c",
+  warning: "#fab219",
+  danger: "#d03b3b",
+};
+
+/**
  * Whether a summary may show anything at all.
  *
  * Exported so the check-in form can tell people the truth *before* they answer
