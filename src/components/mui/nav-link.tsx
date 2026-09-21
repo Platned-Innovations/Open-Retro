@@ -5,6 +5,7 @@ import Box, { type BoxProps } from "@mui/material/Box";
 import Button, { type ButtonProps } from "@mui/material/Button";
 import Chip, { type ChipProps } from "@mui/material/Chip";
 import Typography, { type TypographyProps } from "@mui/material/Typography";
+import CardActionArea, { type CardActionAreaProps } from "@mui/material/CardActionArea";
 
 /**
  * `component={Link}` hands a raw function reference to a Client Component
@@ -28,4 +29,8 @@ export function NavLinkChip(props: ChipProps<typeof Link, { href: string }>) {
 
 export function NavLinkText(props: TypographyProps<typeof Link, { href: string }>) {
   return <Typography component={Link} {...props} />;
+}
+
+export function NavLinkCardArea(props: CardActionAreaProps<typeof Link, { href: string }>) {
+  return <CardActionArea component={Link} {...props} />;
 }
