@@ -1,14 +1,21 @@
 "use client";
 
-import { DropdownMenu, StatusBadge, type DropdownMenuItem } from "@platned/ui";
+import { useState, type MouseEvent } from "react";
+import Chip, { type ChipProps } from "@mui/material/Chip";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import { setActionItemStatus } from "@/server/actions/retros";
-import {
-  ACTION_STATUS_LABELS,
-  ACTION_STATUS_ORDER,
-  ACTION_STATUS_TONE,
-} from "@/lib/actionItems";
+import { ACTION_STATUS_LABELS, ACTION_STATUS_ORDER } from "@/lib/actionItems";
 import { useAction } from "@/lib/useAction";
 import type { ActionItemStatus } from "@/generated/prisma/client";
+
+const STATUS_CHIP_COLOR: Record<ActionItemStatus, ChipProps["color"]> = {
+  OPEN: "default",
+  IN_PROGRESS: "info",
+  BLOCKED: "warning",
+  DONE: "success",
+  DROPPED: "default",
+};
 
 /**
  * The only interactive part of /my-actions.
@@ -28,21 +35,31 @@ export function MyActionStatus({
   description: string;
 }) {
   const { run } = useAction();
-
-  const items: DropdownMenuItem[] = ACTION_STATUS_ORDER.map((next) => ({
-    label: ACTION_STATUS_LABELS[next],
-    disabled: next === status,
-    onSelect: () => run(() => setActionItemStatus({ retrospectiveId, actionItemId, status: next })),
-  }));
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   return (
-    <DropdownMenu
-      items={items}
-      align="right"
-      label={`Change status of "${description.slice(0, 40)}"`}
-      trigger={
-        <StatusBadge label={ACTION_STATUS_LABELS[status]} tone={ACTION_STATUS_TONE[status]} size="sm" />
-      }
-    />
+    <>
+      <Chip
+        label={ACTION_STATUS_LABELS[status]}
+        color={STATUS_CHIP_COLOR[status]}
+        size="small"
+        onClick={(e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)}
+        aria-label={`Change status of "${description.slice(0, 40)}"`}
+      />
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+        {ACTION_STATUS_ORDER.map((next) => (
+          <MenuItem
+            key={next}
+            disabled={next === status}
+            onClick={() => {
+              setAnchorEl(null);
+              run(() => setActionItemStatus({ retrospectiveId, actionItemId, status: next }));
+            }}
+          >
+            {ACTION_STATUS_LABELS[next]}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
   );
 }
