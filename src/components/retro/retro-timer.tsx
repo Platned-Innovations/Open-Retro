@@ -16,6 +16,8 @@ const PRESETS = [
   { label: "3 min", seconds: 180 },
   { label: "5 min", seconds: 300 },
   { label: "10 min", seconds: 600 },
+  { label: "15 min", seconds: 900 },
+  { label: "30 min", seconds: 1800 },
 ];
 
 export function RetroTimer({
@@ -124,7 +126,18 @@ function Countdown({ endsAt, onExpire }: { endsAt: Date; onExpire: () => void })
       label={minutes !== null && seconds !== null ? `${minutes}:${seconds.toString().padStart(2, "0")}` : "--:--"}
       color={low ? "error" : "default"}
       variant="outlined"
-      sx={{ fontVariantNumeric: "tabular-nums" }}
+      sx={{
+        fontVariantNumeric: "tabular-nums",
+        ...(low && {
+          animation: "retro-timer-blink 1s step-start infinite",
+          "@keyframes retro-timer-blink": {
+            "50%": { opacity: 0.35 },
+          },
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+          },
+        }),
+      }}
     />
   );
 }
