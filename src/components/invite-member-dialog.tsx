@@ -4,18 +4,18 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
-import {
-  Button,
-  Textarea,
-  Select,
-  Tabs,
-  Modal,
-  ModalHeader,
-  ModalTitle,
-  ModalDescription,
-  ModalBody,
-  ModalFooter,
-} from "@platned/ui";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogActions from "@mui/material/DialogActions";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 import {
   inviteUserToProject,
   inviteUserToCompany,
@@ -37,11 +37,6 @@ type Props = (
   /** Only admins (or Super Admin) can invite/add someone as an admin — hide the option otherwise. */
   isViewerAdmin: boolean;
 };
-
-const ROLE_OPTIONS = [
-  { value: "MEMBER", label: "Member" },
-  { value: "ADMIN", label: "Admin" },
-];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -67,13 +62,10 @@ function RoleField({
   hint: string;
 }) {
   return (
-    <Select
-      label="Role"
-      hint={hint}
-      options={ROLE_OPTIONS}
-      value={role}
-      onChange={(e) => onChange(e.target.value as MembershipRole)}
-    />
+    <TextField select label="Role" helperText={hint} fullWidth value={role} onChange={(e) => onChange(e.target.value as MembershipRole)}>
+      <MenuItem value="MEMBER">Member</MenuItem>
+      <MenuItem value="ADMIN">Admin</MenuItem>
+    </TextField>
   );
 }
 
@@ -114,16 +106,13 @@ function EmailInviteForm({
       // A refused invite now *resolves* with { ok: false } rather than
       // rejecting, so counting fulfilled promises would report every failure as
       // a success — "Invited 5 people" when none of them were.
-      const succeeded = results.filter(
-        (r) => r.status === "fulfilled" && r.value.ok,
-      ).length;
+      const succeeded = results.filter((r) => r.status === "fulfilled" && r.value.ok).length;
       const failed = results
         .map((r, i) => (r.status === "fulfilled" && r.value.ok ? null : validEmails[i]))
         .filter((email): email is string => email !== null);
 
       const firstError = results.find(
-        (r): r is PromiseFulfilledResult<{ ok: false; error: string }> =>
-          r.status === "fulfilled" && !r.value.ok,
+        (r): r is PromiseFulfilledResult<{ ok: false; error: string }> => r.status === "fulfilled" && !r.value.ok,
       )?.value.error;
 
       if (succeeded > 0) {
@@ -131,15 +120,11 @@ function EmailInviteForm({
       }
       if (failed.length > 0) {
         toast.error(
-          firstError
-            ? `Couldn't invite ${failed.join(", ")}: ${firstError}`
-            : `Failed to invite: ${failed.join(", ")}`,
+          firstError ? `Couldn't invite ${failed.join(", ")}: ${firstError}` : `Failed to invite: ${failed.join(", ")}`,
         );
       }
       if (invalidEmails.length > 0) {
-        toast.warning(
-          `Skipped invalid address${invalidEmails.length > 1 ? "es" : ""}: ${invalidEmails.join(", ")}`,
-        );
+        toast.warning(`Skipped invalid address${invalidEmails.length > 1 ? "es" : ""}: ${invalidEmails.join(", ")}`);
       }
 
       if (succeeded > 0) {
@@ -153,28 +138,30 @@ function EmailInviteForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="flex flex-col gap-4 py-4">
-        <Textarea
-          label="Emails"
-          required
-          value={emailsText}
-          onChange={(e) => setEmailsText(e.target.value)}
-          placeholder="teammate@company.com, another@company.com"
-          className="min-h-20"
-          hint={
-            "Separate multiple emails with commas, spaces, or new lines." +
-            (validEmails.length > 0
-              ? ` ${validEmails.length} valid address${validEmails.length > 1 ? "es" : ""} found.`
-              : "")
-          }
-        />
-        {isViewerAdmin && <RoleField role={role} onChange={setRole} hint="Applies to everyone invited at once." />}
-      </div>
-      <ModalFooter divider>
-        <Button type="submit" disabled={isPending || validEmails.length === 0}>
+      <DialogContent sx={{ pt: 1 }}>
+        <Stack spacing={2}>
+          <TextField
+            label="Emails"
+            required
+            multiline
+            minRows={3}
+            fullWidth
+            value={emailsText}
+            onChange={(e) => setEmailsText(e.target.value)}
+            placeholder="teammate@company.com, another@company.com"
+            helperText={
+              "Separate multiple emails with commas, spaces, or new lines." +
+              (validEmails.length > 0 ? ` ${validEmails.length} valid address${validEmails.length > 1 ? "es" : ""} found.` : "")
+            }
+          />
+          {isViewerAdmin && <RoleField role={role} onChange={setRole} hint="Applies to everyone invited at once." />}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button type="submit" variant="contained" disabled={isPending || validEmails.length === 0}>
           {validEmails.length > 1 ? `Send ${validEmails.length} invites` : "Send invite"}
         </Button>
-      </ModalFooter>
+      </DialogActions>
     </form>
   );
 }
@@ -215,29 +202,40 @@ function AddExistingMemberForm({
 
   if (members.length === 0) {
     return (
-      <p className="py-6 text-center text-body-sm text-default-secondary">
-        Every company member is already on this project.
-      </p>
+      <DialogContent sx={{ pt: 1 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
+          Every company member is already on this project.
+        </Typography>
+      </DialogContent>
     );
   }
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="flex flex-col gap-4 py-4">
-        <Select
-          label="Company member"
-          hint="Already in the company — this adds them straight to the project, no new email link needed."
-          options={members.map((m) => ({ value: m.id, label: `${m.name} (${m.email})` }))}
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-        />
-        {isViewerAdmin && <RoleField role={role} onChange={setRole} hint="Their role on this project." />}
-      </div>
-      <ModalFooter divider>
-        <Button type="submit" disabled={isPending || !userId}>
+      <DialogContent sx={{ pt: 1 }}>
+        <Stack spacing={2}>
+          <TextField
+            select
+            label="Company member"
+            helperText="Already in the company — this adds them straight to the project, no new email link needed."
+            fullWidth
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+          >
+            {members.map((m) => (
+              <MenuItem key={m.id} value={m.id}>
+                {m.name} ({m.email})
+              </MenuItem>
+            ))}
+          </TextField>
+          {isViewerAdmin && <RoleField role={role} onChange={setRole} hint="Their role on this project." />}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button type="submit" variant="contained" disabled={isPending || !userId}>
           Add to project
         </Button>
-      </ModalFooter>
+      </DialogActions>
     </form>
   );
 }
@@ -249,37 +247,27 @@ export function InviteMemberDialog(props: Props) {
 
   return (
     <>
-      <Button size="md" onClick={() => setOpen(true)} leadingIcon={<UserPlus className="h-4 w-4" />}>
+      <Button variant="contained" size="small" onClick={() => setOpen(true)} startIcon={<UserPlus className="h-4 w-4" />}>
         Invite
       </Button>
-      <Modal isOpen={open} onClose={close} label={`Invite to ${props.targetName}`} size="sm">
-        <ModalHeader divider>
-          <ModalTitle>Invite to {props.targetName}</ModalTitle>
-          <ModalDescription>
+      <Dialog open={open} onClose={close} fullWidth maxWidth="xs" aria-label={`Invite to ${props.targetName}`}>
+        <DialogTitle>Invite to {props.targetName}</DialogTitle>
+        <DialogContent sx={{ pb: 0 }}>
+          <DialogContentText>
             {props.target === "project"
               ? "Invite someone new by email, or add an existing company member directly."
               : "They'll each get a one-time sign-in link by email, valid for 12 hours."}
-          </ModalDescription>
-        </ModalHeader>
+          </DialogContentText>
+        </DialogContent>
 
         {props.target === "project" ? (
-          <ModalBody>
-            <Tabs
-              items={[
-                { key: "email", label: "Invite by email" },
-                { key: "existing", label: "Add existing member" },
-              ]}
-              value={tab}
-              onChange={setTab}
-              size="sm"
-            />
+          <>
+            <Tabs value={tab} onChange={(_, v: "email" | "existing") => setTab(v)} sx={{ px: 3, borderBottom: 1, borderColor: "divider" }}>
+              <Tab label="Invite by email" value="email" />
+              <Tab label="Add existing member" value="existing" />
+            </Tabs>
             {tab === "email" ? (
-              <EmailInviteForm
-                target="project"
-                targetId={props.targetId}
-                isViewerAdmin={props.isViewerAdmin}
-                onDone={close}
-              />
+              <EmailInviteForm target="project" targetId={props.targetId} isViewerAdmin={props.isViewerAdmin} onDone={close} />
             ) : (
               <AddExistingMemberForm
                 projectId={props.targetId}
@@ -288,18 +276,11 @@ export function InviteMemberDialog(props: Props) {
                 onDone={close}
               />
             )}
-          </ModalBody>
+          </>
         ) : (
-          <ModalBody>
-            <EmailInviteForm
-              target="company"
-              targetId={props.targetId}
-              isViewerAdmin={props.isViewerAdmin}
-              onDone={close}
-            />
-          </ModalBody>
+          <EmailInviteForm target="company" targetId={props.targetId} isViewerAdmin={props.isViewerAdmin} onDone={close} />
         )}
-      </Modal>
+      </Dialog>
     </>
   );
 }

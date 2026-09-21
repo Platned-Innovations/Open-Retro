@@ -265,7 +265,7 @@ export function RetroBoardView({
               action={deleteRetrospective}
               id={retro.id}
               redirectTo={`/projects/${retro.projectId}`}
-              size="md"
+              size="medium"
             />
           )}
         </div>

@@ -89,7 +89,7 @@ export default async function ProjectPage({
                 action={deleteProject}
                 id={project.id}
                 redirectTo={`/companies/${project.companyId}`}
-                size="md"
+                size="medium"
               />
             )}
           </div>

@@ -1,9 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { Card, CardBody, Input, IconButton, Select } from "@platned/ui";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import Stack from "@mui/material/Stack";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import InputAdornment from "@mui/material/InputAdornment";
+import IconButton from "@mui/material/IconButton";
+import Popover from "@mui/material/Popover";
+import Box from "@mui/material/Box";
 import { MemberRow } from "@/components/member-row";
 import type { MembershipRole } from "@/generated/prisma/client";
 import type { MemberUser } from "@/types/member";
@@ -30,17 +37,11 @@ type Props = {
 const ALL = "__all__";
 
 /** Search box + role/project filter above a scrollable member list, so a long roster doesn't push the rest of the page down. */
-export function MembersPanel({
-  scope,
-  scopeId,
-  memberships,
-  currentUserId,
-  isViewerAdmin,
-  adminCount,
-}: Props) {
+export function MembersPanel({ scope, scopeId, memberships, currentUserId, isViewerAdmin, adminCount }: Props) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>(ALL);
   const [projectFilter, setProjectFilter] = useState<string>(ALL);
+  const [filterAnchor, setFilterAnchor] = useState<null | HTMLElement>(null);
 
   const projectOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -61,72 +62,69 @@ export function MembersPanel({
   const hasActiveFilters = roleFilter !== ALL || projectFilter !== ALL;
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <Input
-          size="sm"
+    <Stack spacing={1}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+        <TextField
+          size="small"
           placeholder="Search members"
           aria-label="Search members"
-          leadingIcon={<Search className="size-4" />}
+          fullWidth
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1"
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search className="size-4" />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
-        {/* Base UI's Popover rather than a hand-rolled absolute div: it brings
-            the dialog role, focus management, Esc-to-close and collision
-            detection that the hand-rolled one had none of. */}
-        <Popover>
-          <PopoverTrigger
-            render={
-              <IconButton
-                aria-label="Filter members"
-                variant={hasActiveFilters ? "primary" : "neutral"}
-                size="sm"
-              />
-            }
-          >
-            <SlidersHorizontal className="size-4" />
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-3" align="end">
-            <div className="flex flex-col gap-3">
-              <Select
-                label="Role"
-                size="sm"
-                options={[
-                  { value: ALL, label: "All roles" },
-                  { value: "ADMIN", label: "Admin" },
-                  { value: "MEMBER", label: "Member" },
-                ]}
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-              />
-              {projectOptions.length > 0 && (
-                <Select
-                  label="Project"
-                  size="sm"
-                  options={[
-                    { value: ALL, label: "All projects" },
-                    ...projectOptions.map((p) => ({ value: p.id, label: p.name })),
-                  ]}
-                  value={projectFilter}
-                  onChange={(e) => setProjectFilter(e.target.value)}
-                />
-              )}
-            </div>
-          </PopoverContent>
+        <IconButton
+          aria-label="Filter members"
+          size="small"
+          color={hasActiveFilters ? "primary" : "default"}
+          onClick={(e: MouseEvent<HTMLElement>) => setFilterAnchor(e.currentTarget)}
+        >
+          <SlidersHorizontal className="size-4" />
+        </IconButton>
+        <Popover
+          open={Boolean(filterAnchor)}
+          anchorEl={filterAnchor}
+          onClose={() => setFilterAnchor(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <Stack spacing={2} sx={{ p: 2, width: 224 }}>
+            <TextField select size="small" label="Role" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+              <MenuItem value={ALL}>All roles</MenuItem>
+              <MenuItem value="ADMIN">Admin</MenuItem>
+              <MenuItem value="MEMBER">Member</MenuItem>
+            </TextField>
+            {projectOptions.length > 0 && (
+              <TextField select size="small" label="Project" value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+                <MenuItem value={ALL}>All projects</MenuItem>
+                {projectOptions.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          </Stack>
         </Popover>
-      </div>
+      </Stack>
 
-      {/* overflow-visible: MemberRow's action menu is absolutely positioned and would
-          otherwise be clipped by Card's default overflow-hidden. */}
-      <Card className="overflow-visible">
-        <CardBody size="sm" className="flex max-h-[420px] flex-col gap-0 divide-y divide-divider overflow-y-auto overflow-x-hidden p-0">
-          {filtered.length === 0 ? (
-            <p className="p-4 text-body-sm text-default-secondary">No members match.</p>
-          ) : (
-            filtered.map((m) => (
+      <Paper variant="outlined" sx={{ maxHeight: 420, overflowY: "auto", overflowX: "hidden" }}>
+        {filtered.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+            No members match.
+          </Typography>
+        ) : (
+          filtered.map((m, i) => (
+            <Box key={m.id} sx={i > 0 ? { borderTop: 1, borderColor: "divider" } : undefined}>
               <MemberRow
-                key={m.id}
                 scope={scope}
                 scopeId={scopeId}
                 membership={m}
@@ -134,10 +132,10 @@ export function MembersPanel({
                 isViewerAdmin={isViewerAdmin}
                 adminCount={adminCount}
               />
-            ))
-          )}
-        </CardBody>
-      </Card>
-    </div>
+            </Box>
+          ))
+        )}
+      </Paper>
+    </Stack>
   );
 }
