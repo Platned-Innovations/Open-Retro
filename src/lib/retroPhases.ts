@@ -122,7 +122,7 @@ export function canInPhase(
 
 export type StepStatus = "complete" | "active" | "upcoming";
 
-/** Maps the flow onto @platned/ui's Stepper, which takes `{ label, status }`. */
+/** Maps the flow onto PhaseBar's step list; `status` becomes MUI Stepper's `activeStep` index. */
 export function toStepperSteps(
   current: RetroPhase,
   options: FlowOptions,
