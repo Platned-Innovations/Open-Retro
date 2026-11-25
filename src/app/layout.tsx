@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Chivo, Chivo_Mono } from "next/font/google";
+import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
@@ -33,9 +34,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      // InitColorSchemeScript adds the `light` / `dark` class before React
+      // loads, so the server's <html> and the browser's differ on purpose.
+      suppressHydrationWarning
       className={`${chivo.variable} ${chivoMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {/* Sets the mode class on <html> before first paint: no white flash
+            on a dark page. Must match the theme's colorSchemeSelector. */}
+        <InitColorSchemeScript attribute="class" defaultMode="system" />
         <Providers>{children}</Providers>
       </body>
     </html>

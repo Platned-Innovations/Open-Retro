@@ -90,7 +90,7 @@ export function RetroColumn({
           border: 1,
           borderStyle: isOver ? "dashed" : "solid",
           borderColor: isOver ? column.color : "divider",
-          bgcolor: isOver ? alpha(column.color, 0.1) : "#f3f3f3",
+          bgcolor: isOver ? alpha(column.color, 0.1) : "var(--p-surface)",
           boxShadow: `inset 0 3px 0 ${alpha(column.color, 0.9)}`,
           transition: "background-color 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms cubic-bezier(.2,.8,.2,1)",
           p: 1.25,

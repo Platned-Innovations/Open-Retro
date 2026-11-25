@@ -36,7 +36,7 @@ function StatTile({
 }) {
   return (
     <Paper variant="outlined" sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 2, borderRadius: 2.5 }}>
-      <Avatar variant="rounded" sx={{ bgcolor: "#f3f3f3", color: `${color}.main`, width: 44, height: 44 }}>{icon}</Avatar>
+      <Avatar variant="rounded" sx={{ bgcolor: "var(--p-surface)", color: `${color}.main`, width: 44, height: 44 }}>{icon}</Avatar>
       <Box>
         <Typography variant="h4" sx={{ lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
           {value}

@@ -17,6 +17,7 @@ import { MailCheck } from "lucide-react";
 
 import { requestLoginLink } from "@/server/actions/auth";
 import { ds } from "@/lib/design";
+import { ColorModeMenu } from "@/components/color-mode-menu";
 
 const APP_NAME = "Agile Retro";
 
@@ -55,7 +56,7 @@ function BoardFragment() {
       role="img"
       aria-label="A retrospective board with Start, Stop and Continue columns, one card highlighted for discussion"
       sx={{
-        bgcolor: ds.invSurface,
+        bgcolor: ds.fixed.invSurface,
         border: "1px solid rgba(255,255,255,0.08)",
         borderRadius: `${ds.r.lg}px`,
         p: 1.5,
@@ -66,7 +67,7 @@ function BoardFragment() {
         {[0, 1, 2].map((i) => (
           <Box key={i} sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "rgba(255,255,255,0.16)" }} />
         ))}
-        <Typography sx={{ ml: 1, fontFamily: ds.fontMono, fontSize: 11.5, color: ds.invMuted }}>
+        <Typography sx={{ ml: 1, fontFamily: ds.fontMono, fontSize: 11.5, color: ds.fixed.invMuted }}>
           Sprint 42 · Discuss
         </Typography>
       </Stack>
@@ -75,26 +76,26 @@ function BoardFragment() {
           <Stack key={col.title} spacing={1} sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", px: 0.5 }}>
               <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: col.color }} />
-              <Typography sx={{ fontSize: 12, fontWeight: 500, color: ds.invInk }}>{col.title}</Typography>
+              <Typography sx={{ fontSize: 12, fontWeight: 500, color: ds.fixed.invInk }}>{col.title}</Typography>
             </Stack>
             {col.cards.map((card) => (
               <Box
                 key={card.text}
                 sx={{
                   bgcolor: "#fff",
-                  color: ds.ink,
+                  color: ds.fixed.ink,
                   borderRadius: `${ds.r.sm}px`,
                   p: 1,
                   fontSize: 12,
                   lineHeight: 1.35,
-                  outline: card.focus ? `2px solid ${ds.accent}` : "none",
+                  outline: card.focus ? `2px solid ${ds.fixed.accent}` : "none",
                   outlineOffset: 2,
                 }}
               >
                 {card.text}
                 <Stack direction="row" spacing={0.5} sx={{ mt: 0.75, alignItems: "center" }}>
                   {Array.from({ length: card.votes }, (_, i) => (
-                    <Box key={i} sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: ds.ink }} />
+                    <Box key={i} sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: ds.fixed.ink }} />
                   ))}
                 </Stack>
               </Box>
@@ -121,8 +122,8 @@ function BrandPanel() {
         justifyContent: "space-between",
         width: { md: "52%", lg: "56%" },
         flexShrink: 0,
-        bgcolor: ds.invBg,
-        color: ds.invInk,
+        bgcolor: ds.fixed.invBg,
+        color: ds.fixed.invInk,
         p: { md: 6, lg: 8 },
         gap: 6,
         overflow: "hidden",
@@ -138,14 +139,14 @@ function BrandPanel() {
           component="p"
           variant="h2"
           className="enter enter-2"
-          sx={{ color: ds.invInk, letterSpacing: "-0.04em", lineHeight: 1.04 }}
+          sx={{ color: ds.fixed.invInk, letterSpacing: "-0.04em", lineHeight: 1.04 }}
         >
           Retrospectives that run the meeting, not just store what came out of it.
         </Typography>
         <Stack component="ul" spacing={1.25} className="enter enter-3" sx={{ mt: 4, p: 0, listStyle: "none" }}>
           {points.map((point, i) => (
             <Stack component="li" key={point} direction="row" spacing={1.5} sx={{ alignItems: "baseline" }}>
-              <Typography component="span" sx={{ fontFamily: ds.fontMono, fontSize: 12.5, color: ds.accent }}>
+              <Typography component="span" sx={{ fontFamily: ds.fontMono, fontSize: 12.5, color: ds.fixed.accent }}>
                 0{i + 1}
               </Typography>
               <Typography component="span" sx={{ fontSize: 16, color: "rgba(255,255,255,0.86)" }}>
@@ -222,8 +223,11 @@ function LoginForm() {
 
       <Box
         component="main"
-        sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", px: { xs: 2, sm: 4 }, py: 6 }}
+        sx={{ position: "relative", flex: 1, display: "flex", alignItems: "center", justifyContent: "center", px: { xs: 2, sm: 4 }, py: 6 }}
       >
+        <Box sx={{ position: "absolute", top: { xs: 12, md: 20 }, right: { xs: 12, md: 20 } }}>
+          <ColorModeMenu />
+        </Box>
         <Box sx={{ width: "100%", maxWidth: 380 }} className="enter enter-2">
           <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", mb: 5, display: { md: "none" } }}>
             <Image src="/logo.png" alt="" width={28} height={28} priority />

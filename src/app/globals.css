@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Tailwind's `dark:` follows the app's mode (the `.dark` class), not the OS. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -52,23 +55,27 @@
      sonner and any Tailwind piece share one system with MUI. */
   --p-bg: #ffffff;
   --p-surface: #f3f3f3;
+  --p-card: #ffffff;
   --p-ink: #232323;
   --p-muted: #686868;
   --p-accent: #a1ffcb;
   --p-accent-ink: #232323;
-  --p-line: color-mix(in oklab, var(--p-ink) 11%, transparent);
-  --p-line-strong: color-mix(in oklab, var(--p-ink) 20%, transparent);
+  --p-action: #232323;
+  --p-action-ink: #ffffff;
+  --p-line: rgba(35, 35, 35, 0.11);
+  --p-line-strong: rgba(35, 35, 35, 0.2);
+  --p-focus-ring: rgba(161, 255, 203, 0.75);
   --ease: cubic-bezier(.2, .8, .2, 1);
   --dur: 180ms;
 
   --background: var(--p-bg);
   --foreground: var(--p-ink);
-  --card: var(--p-bg);
+  --card: var(--p-card);
   --card-foreground: var(--p-ink);
-  --popover: var(--p-bg);
+  --popover: var(--p-card);
   --popover-foreground: var(--p-ink);
-  --primary: var(--p-ink);
-  --primary-foreground: #ffffff;
+  --primary: var(--p-action);
+  --primary-foreground: var(--p-action-ink);
   --secondary: var(--p-surface);
   --secondary-foreground: var(--p-ink);
   --muted: var(--p-surface);
@@ -87,24 +94,34 @@
   --radius: 0.75rem;
   --sidebar: var(--p-surface);
   --sidebar-foreground: var(--p-ink);
-  --sidebar-primary: var(--p-ink);
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary: var(--p-action);
+  --sidebar-primary-foreground: var(--p-action-ink);
   --sidebar-accent: var(--p-bg);
   --sidebar-accent-foreground: var(--p-ink);
   --sidebar-border: var(--p-line);
   --sidebar-ring: var(--p-ink);
 }
 
-/* No dark mode.
- *
- * A `.dark` block of ~30 shadcn variables used to live here, with no
- * ThemeProvider mounted anywhere to add the class — so it was thirty lines of
- * CSS that could never apply. Removed along with next-themes, which sonner was
- * calling useTheme() from and always getting the "system" fallback, giving dark
- * toasts on top of a light app for anyone whose OS is in dark mode.
- *
- * If dark mode is wanted later, it needs a provider and a pass over
- * @platned/ui's own tokens too — not just these variables back. */
+/* Dark: the palette's inverse ground (values match `palettes.dark` in
+ * src/lib/design.ts). MUI puts the `.dark` class on <html> when the mode is
+ * dark, or system with the OS in dark; InitColorSchemeScript sets it before
+ * first paint, so a dark page never flashes white. The shadcn names above all
+ * read these, so sonner and Tailwind follow too. */
+.dark {
+  --p-bg: #161616;
+  --p-surface: #1f1f1f;
+  --p-card: #232323;
+  --p-ink: #ededed;
+  --p-muted: #a4a4a4;
+  --p-accent: #a1ffcb;
+  --p-accent-ink: #161616;
+  --p-action: #a1ffcb;
+  --p-action-ink: #161616;
+  --p-line: rgba(237, 237, 237, 0.11);
+  --p-line-strong: rgba(237, 237, 237, 0.22);
+  --p-focus-ring: rgba(161, 255, 203, 0.35);
+  --destructive: #ff6b5e;
+}
 
 @layer base {
   * {

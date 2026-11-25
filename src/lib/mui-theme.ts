@@ -1,28 +1,32 @@
-import { createTheme, alpha, type Shadows } from "@mui/material/styles";
-import { ds } from "@/lib/design";
+import { createTheme, type Shadows } from "@mui/material/styles";
+import { ds, inkMix, palettes } from "@/lib/design";
 
 export { ds };
 
 /**
  * One design system for the whole app, dealt by tasteskill for a software
  * product: palette "white-mint-tiles", type pairing Chivo + Chivo Mono, the
- * soft radius scale.
+ * soft radius scale. Light, dark and system modes.
  *
- *  - The action colour is the ink itself. Primary buttons, the active step,
- *    the selected tab: all #232323 on white, so nothing competes with the
- *    content people are actually writing on the board.
- *  - Mint is the one accent. It marks "this one, now" — the card under
- *    discussion, the open-items count, a focused field's ring — and is never
- *    used for text, because mint on white has no contrast to speak of.
- *  - Lines are ink at 11% (rest) and 20% (strong), never a separate grey, so
- *    every border sits in the same family as the text.
+ *  - Light: the action colour is the ink itself. Primary buttons, the active
+ *    step, the selected tab: all #232323 on white, so nothing competes with
+ *    the content people are writing on the board.
+ *  - Dark: the palette's inverse ground. The page is near-black, the text is
+ *    light, and mint takes over as the action colour.
+ *  - Mint marks "this one, now" in both: the card under discussion, the
+ *    open-items count, a focused field's ring.
+ *  - Lines are ink at 11% (rest) and ~20% (strong), never a separate grey.
+ *
+ * Colours come in twice: `colorSchemes` gives MUI real values per scheme (it
+ * derives hover and disabled shades from them), and every override below
+ * uses the CSS variables in `ds`, which globals.css switches with the `.dark`
+ * class. The mode is the MUI `mui-mode` setting (light, dark or system),
+ * applied before first paint by InitColorSchemeScript in the root layout.
  *
  * Radius is one scale: 8 (controls), 12 (inputs, panels, menus), 20 (cards,
  * dialogs). `shape.borderRadius` stays 8 so `sx={{ borderRadius: n }}`
  * multiples land on that scale: 1 = 8, 1.5 = 12, 2.5 = 20.
  */
-
-
 
 const t = (props: string) =>
   props
@@ -38,7 +42,7 @@ const shadows = Array.from({ length: 25 }, (_, i) => {
   if (i === 0) return "none";
   const y = Math.min(2 + i * 2, 32);
   const blur = Math.min(8 + i * 4, 64);
-  return `0 1px 2px ${alpha(ds.ink, 0.04)}, 0 ${y}px ${blur}px -${Math.round(y / 2)}px ${alpha(ds.ink, 0.14)}`;
+  return `0 1px 2px rgba(0,0,0,0.05), 0 ${y}px ${blur}px -${Math.round(y / 2)}px rgba(0,0,0,0.18)`;
 }) as Shadows;
 
 const displayHeading = {
@@ -48,39 +52,48 @@ const displayHeading = {
   textWrap: "balance",
 } as const;
 
-export const theme = createTheme({
-  palette: {
+function schemePalette(mode: "light" | "dark") {
+  const p = palettes[mode];
+  const dark = mode === "dark";
+  return {
+    mode,
     primary: {
-      main: ds.ink,
-      light: "#4a4a4a",
-      dark: "#111111",
-      contrastText: "#ffffff",
+      main: p.action,
+      light: dark ? "#c9ffe1" : "#4a4a4a",
+      dark: dark ? "#7fe8ae" : "#111111",
+      contrastText: p.actionInk,
     },
     secondary: {
-      main: ds.accent,
+      main: p.accent,
       light: "#c9ffe1",
       dark: "#5fe39a",
-      contrastText: ds.accentInk,
+      contrastText: p.accentInk,
     },
-    success: { main: "#1e8a5a", contrastText: "#ffffff" },
-    warning: { main: "#c77700", contrastText: "#ffffff" },
-    error: { main: "#d33a2f", contrastText: "#ffffff" },
-    info: { main: "#2a6fd6", contrastText: "#ffffff" },
+    success: { main: dark ? "#3ecf8e" : "#1e8a5a", contrastText: dark ? "#0f1f17" : "#ffffff" },
+    warning: { main: dark ? "#f0a93b" : "#c77700", contrastText: dark ? "#1f1405" : "#ffffff" },
+    error: { main: dark ? "#ff6b5e" : "#d33a2f", contrastText: dark ? "#1f0806" : "#ffffff" },
+    info: { main: dark ? "#6ea8ff" : "#2a6fd6", contrastText: dark ? "#06132b" : "#ffffff" },
     text: {
-      primary: ds.ink,
-      secondary: ds.muted,
-      disabled: alpha(ds.ink, 0.38),
+      primary: p.ink,
+      secondary: p.muted,
+      disabled: dark ? "rgba(237,237,237,0.38)" : "rgba(35,35,35,0.38)",
     },
     background: {
-      default: ds.bg,
-      paper: ds.bg,
+      default: p.bg,
+      paper: p.card,
     },
-    divider: ds.line,
-    action: {
-      hover: alpha(ds.ink, 0.04),
-      selected: alpha(ds.ink, 0.07),
-      focus: alpha(ds.ink, 0.1),
-    },
+    divider: p.line,
+    action: dark
+      ? { hover: "rgba(237,237,237,0.06)", selected: "rgba(237,237,237,0.1)", focus: "rgba(237,237,237,0.14)" }
+      : { hover: "rgba(35,35,35,0.04)", selected: "rgba(35,35,35,0.07)", focus: "rgba(35,35,35,0.1)" },
+  };
+}
+
+export const theme = createTheme({
+  cssVariables: { colorSchemeSelector: "class" },
+  colorSchemes: {
+    light: { palette: schemePalette("light") },
+    dark: { palette: schemePalette("dark") },
   },
   shape: {
     borderRadius: ds.r.sm,
@@ -128,6 +141,8 @@ export const theme = createTheme({
         },
         "::selection": { backgroundColor: ds.accent, color: ds.accentInk },
         ":focus-visible": { outline: `2px solid ${ds.ink}`, outlineOffset: 2 },
+        ":root": { colorScheme: "light" },
+        ":root.dark": { colorScheme: "dark" },
         ".Mui-focusVisible": { outline: `2px solid ${ds.ink}`, outlineOffset: 2 },
       },
     },
@@ -160,13 +175,13 @@ export const theme = createTheme({
         {
           props: { variant: "contained", color: "primary" },
           style: {
-            "&:hover": { backgroundColor: "#464646" },
-            "&.Mui-disabled": { backgroundColor: alpha(ds.ink, 0.12), color: alpha(ds.ink, 0.4) },
+            "&:hover": { backgroundColor: `color-mix(in oklab, ${ds.action} 86%, ${ds.bg})` },
+            "&.Mui-disabled": { backgroundColor: inkMix(12), color: inkMix(40) },
           },
         },
         {
           props: { variant: "contained", color: "secondary" },
-          style: { "&:hover": { backgroundColor: "#8af0b8" } },
+          style: { "&:hover": { backgroundColor: `color-mix(in oklab, ${ds.accent} 88%, ${ds.ink})` } },
         },
         {
           props: { variant: "outlined", color: "primary" },
@@ -174,16 +189,16 @@ export const theme = createTheme({
             color: ds.ink,
             backgroundColor: ds.bg,
             borderColor: ds.lineStrong,
-            "&:hover": { backgroundColor: "#f1f1f1", borderColor: alpha(ds.ink, 0.35) },
+            "&:hover": { backgroundColor: `color-mix(in oklab, ${ds.bg} 94%, ${ds.ink})`, borderColor: inkMix(35) },
           },
         },
         {
           props: { variant: "outlined", color: "inherit" },
-          style: { borderColor: ds.lineStrong, "&:hover": { borderColor: alpha(ds.ink, 0.35) } },
+          style: { borderColor: ds.lineStrong, "&:hover": { borderColor: inkMix(35) } },
         },
         {
           props: { variant: "text", color: "primary" },
-          style: { color: ds.ink, "&:hover": { backgroundColor: alpha(ds.ink, 0.05) } },
+          style: { color: ds.ink, "&:hover": { backgroundColor: inkMix(5) } },
         },
       ],
     },
@@ -192,7 +207,7 @@ export const theme = createTheme({
         root: {
           borderRadius: ds.r.sm,
           transition: t("background-color, color, transform"),
-          "&:hover": { backgroundColor: alpha(ds.ink, 0.06) },
+          "&:hover": { backgroundColor: inkMix(6) },
           "&:active": { transform: "scale(.94)" },
         },
         sizeSmall: { padding: 6 },
@@ -215,7 +230,7 @@ export const theme = createTheme({
           "&.Mui-selected": {
             backgroundColor: ds.bg,
             color: ds.ink,
-            boxShadow: `0 1px 2px ${alpha(ds.ink, 0.08)}, 0 0 0 1px ${ds.line}`,
+            boxShadow: `0 1px 2px ${inkMix(8)}, 0 0 0 1px ${ds.line}`,
             "&:hover": { backgroundColor: ds.bg },
           },
         },
@@ -247,7 +262,7 @@ export const theme = createTheme({
             "&:has(> .MuiCardActionArea-root:hover)": {
               transform: "translateY(-2px)",
               borderColor: ds.lineStrong,
-              boxShadow: `0 10px 24px -14px ${alpha(ds.ink, 0.28)}`,
+              boxShadow: `0 10px 24px -14px ${inkMix(28)}`,
             },
           },
         },
@@ -287,13 +302,13 @@ export const theme = createTheme({
         paper: {
           borderRadius: ds.r.lg,
           border: `1px solid ${ds.line}`,
-          boxShadow: `0 1px 2px ${alpha(ds.ink, 0.05)}, 0 32px 64px -24px ${alpha(ds.ink, 0.3)}`,
+          boxShadow: `0 1px 2px ${inkMix(5)}, 0 32px 64px -24px ${inkMix(30)}`,
         },
       },
     },
     MuiBackdrop: {
       styleOverrides: {
-        root: { "&:not(.MuiBackdrop-invisible)": { backgroundColor: alpha(ds.ink, 0.32), backdropFilter: "blur(2px)" } },
+        root: { "&:not(.MuiBackdrop-invisible)": { backgroundColor: inkMix(32), backdropFilter: "blur(2px)" } },
       },
     },
     MuiDialogTitle: {
@@ -312,7 +327,7 @@ export const theme = createTheme({
         paper: {
           borderRadius: ds.r.md,
           border: `1px solid ${ds.line}`,
-          boxShadow: `0 1px 2px ${alpha(ds.ink, 0.04)}, 0 16px 40px -16px ${alpha(ds.ink, 0.22)}`,
+          boxShadow: `0 1px 2px ${inkMix(4)}, 0 16px 40px -16px ${inkMix(22)}`,
         },
       },
     },
@@ -325,15 +340,15 @@ export const theme = createTheme({
           fontSize: 14,
           borderRadius: 6,
           minHeight: 36,
-          "&:hover": { backgroundColor: alpha(ds.ink, 0.05) },
-          "&.Mui-selected": { backgroundColor: alpha(ds.ink, 0.07) },
+          "&:hover": { backgroundColor: inkMix(5) },
+          "&.Mui-selected": { backgroundColor: inkMix(7) },
         },
       },
     },
     MuiTooltip: {
       defaultProps: { arrow: false },
       styleOverrides: {
-        tooltip: { backgroundColor: ds.ink, fontSize: 12.5, fontWeight: 500, borderRadius: 6, padding: "6px 10px" },
+        tooltip: { backgroundColor: ds.ink, color: ds.bg, fontSize: 12.5, fontWeight: 500, borderRadius: 6, padding: "6px 10px" },
       },
     },
     MuiAutocomplete: {
@@ -351,10 +366,10 @@ export const theme = createTheme({
           backgroundColor: ds.bg,
           transition: t("box-shadow"),
           "& .MuiOutlinedInput-notchedOutline": { borderColor: ds.lineStrong, transition: t("border-color") },
-          "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: alpha(ds.ink, 0.4) },
+          "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: inkMix(40) },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: ds.ink, borderWidth: 1 },
-          "&.Mui-focused": { boxShadow: `0 0 0 3px ${alpha(ds.accent, 0.75)}` },
-          "&.Mui-error.Mui-focused": { boxShadow: `0 0 0 3px ${alpha("#d33a2f", 0.18)}` },
+          "&.Mui-focused": { boxShadow: `0 0 0 3px ${ds.focusRing}` },
+          "&.Mui-error.Mui-focused": { boxShadow: "0 0 0 3px rgba(211, 58, 47, 0.2)" },
         },
       },
     },
@@ -369,11 +384,11 @@ export const theme = createTheme({
     MuiSwitch: {
       styleOverrides: {
         root: { padding: 8 },
-        track: { borderRadius: 999, backgroundColor: alpha(ds.ink, 0.35), opacity: 1 },
-        thumb: { boxShadow: `0 1px 2px ${alpha(ds.ink, 0.25)}` },
+        track: { borderRadius: 999, backgroundColor: inkMix(35), opacity: 1 },
+        thumb: { boxShadow: `0 1px 2px ${inkMix(25)}` },
         switchBase: {
-          "&.Mui-checked + .MuiSwitch-track": { backgroundColor: ds.ink, opacity: 1 },
-          "&.Mui-checked .MuiSwitch-thumb": { backgroundColor: ds.accent },
+          "&.Mui-checked + .MuiSwitch-track": { backgroundColor: ds.action, opacity: 1 },
+          "&.Mui-checked .MuiSwitch-thumb": { backgroundColor: ds.actionInk },
         },
       },
     },
@@ -406,7 +421,7 @@ export const theme = createTheme({
       },
     },
     MuiBreadcrumbs: {
-      styleOverrides: { root: { fontSize: 14 }, separator: { color: alpha(ds.ink, 0.3), marginInline: 6 } },
+      styleOverrides: { root: { fontSize: 14 }, separator: { color: inkMix(30), marginInline: 6 } },
     },
     MuiLink: {
       defaultProps: { underline: "hover" },
@@ -422,7 +437,7 @@ export const theme = createTheme({
     MuiStepIcon: {
       styleOverrides: {
         root: {
-          color: alpha(ds.ink, 0.1),
+          color: inkMix(10),
           "&:not(.Mui-active):not(.Mui-completed) .MuiStepIcon-text": { fill: ds.muted },
           "&.Mui-active": { color: ds.ink },
           "&.Mui-completed": { color: ds.ink },
@@ -447,7 +462,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: ds.r.sm,
-          "&.Mui-selected": { backgroundColor: ds.ink, color: "#fff", "&:hover": { backgroundColor: "#464646" } },
+          "&.Mui-selected": { backgroundColor: ds.action, color: ds.actionInk, "&:hover": { backgroundColor: `color-mix(in oklab, ${ds.action} 86%, ${ds.bg})` } },
         },
       },
     },
@@ -486,7 +501,7 @@ export const theme = createTheme({
     },
     MuiLinearProgress: {
       styleOverrides: {
-        root: { borderRadius: 999, backgroundColor: alpha(ds.ink, 0.08) },
+        root: { borderRadius: 999, backgroundColor: inkMix(8) },
         bar: { borderRadius: 999 },
       },
     },
@@ -500,7 +515,7 @@ export const theme = createTheme({
       styleOverrides: { root: { "&:last-child td": { borderBottom: 0 } } },
     },
     MuiSkeleton: {
-      styleOverrides: { root: { backgroundColor: alpha(ds.ink, 0.06) }, rounded: { borderRadius: ds.r.md } },
+      styleOverrides: { root: { backgroundColor: inkMix(6) }, rounded: { borderRadius: ds.r.md } },
     },
   },
 });

@@ -169,17 +169,17 @@ export function RetroCardItem({
         p: 1.5,
         borderRadius: 1.5,
         bgcolor: "background.paper",
-        boxShadow: "0 1px 2px rgba(35,35,35,0.05)",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
         opacity: isDragging ? 0.5 : 1,
         transform: CSS.Transform.toString(transform),
         transition: transition ?? "border-color 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms cubic-bezier(.2,.8,.2,1)",
-        "&:hover": { borderColor: "rgba(35,35,35,0.2)" },
+        "&:hover": { borderColor: "var(--p-line-strong)" },
         // Everyone's board marks the same card, so "the one we're on" is never
         // ambiguous mid-discussion: an ink edge with the one accent around it.
         ...(isUnderDiscussion && {
           borderColor: "primary.main",
           "&:hover": { borderColor: "primary.main" },
-          boxShadow: (theme) => `0 0 0 4px ${theme.palette.secondary.main}`,
+          boxShadow: "0 0 0 4px var(--p-focus-ring)",
         }),
       }}
     >

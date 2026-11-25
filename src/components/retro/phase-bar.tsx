@@ -42,7 +42,7 @@ export function PhaseBar({ retro }: { retro: RetroBoard }) {
   const showVoteBudget = retro.phase === "VOTE" && retro.votesRemaining !== null;
 
   return (
-    <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 2.5, bgcolor: "#f3f3f3" }}>
+    <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 2.5, bgcolor: "var(--p-surface)" }}>
       <Stack spacing={2}>
         <Stepper activeStep={activeStep} alternativeLabel>
           {steps.map((step) => (

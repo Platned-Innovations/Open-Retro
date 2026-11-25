@@ -1,18 +1,17 @@
 "use client"
 
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { useColorScheme } from "@mui/material/styles"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { colorScheme } = useColorScheme()
+
   return (
     <Sonner
-      // Fixed light, matching the app.
-      //
-      // This read `useTheme()` from next-themes with no ThemeProvider mounted
-      // anywhere, so it always fell back to "system" — which meant a viewer
-      // whose OS is in dark mode got dark toasts on top of a light app. The
-      // app has no dark mode; the toasts shouldn't pretend otherwise.
-      theme="light"
+      // The app's own mode, not next-themes (never mounted here) and not
+      // the OS directly: "system" is resolved by MUI to the actual scheme.
+      theme={colorScheme ?? "light"}
       className="toaster group"
       icons={{
         success: (

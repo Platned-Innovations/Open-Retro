@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NavLinkBox } from "@/components/mui/nav-link";
 import { HeaderNavLink } from "@/components/header-nav-link";
+import { ColorModeMenu } from "@/components/color-mode-menu";
 import { colorForUser, textColorOn } from "@/lib/userColor";
 import { ds } from "@/lib/design";
 import { ListChecks, ShieldCheck } from "lucide-react";
@@ -71,7 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           // A number, not `(theme) => theme.zIndex.appBar`: this is a Server
           // Component and a function can't cross into MUI's client Box.
           zIndex: 1100,
-          bgcolor: "rgba(255,255,255,0.86)",
+          bgcolor: `color-mix(in oklab, ${ds.bg} 86%, transparent)`,
           backdropFilter: "saturate(1.4) blur(12px)",
           borderBottom: 1,
           borderColor: "divider",
@@ -98,11 +99,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 </Box>
               </HeaderNavLink>
             )}
+            <ColorModeMenu />
             {user && (
-              <Divider orientation="vertical" flexItem sx={{ mx: { xs: 0.5, sm: 1.5 }, my: 2.25 }} />
+              <Divider orientation="vertical" flexItem sx={{ mx: { xs: 0.5, sm: 1.5 }, my: 2.25, display: { xs: "none", sm: "block" } }} />
             )}
             {user && userAvatarBg && (
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center", pr: { xs: 0, sm: 0.5 } }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center", pr: { xs: 0, sm: 0.5 }, display: { xs: "none", sm: "flex" } }}>
                 <Avatar sx={{ width: 28, height: 28, fontSize: 13, bgcolor: userAvatarBg, color: textColorOn(userAvatarBg) }}>
                   {(user.name?.[0] ?? "?").toUpperCase()}
                 </Avatar>
