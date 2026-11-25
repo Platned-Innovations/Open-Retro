@@ -68,7 +68,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         sx={{
           position: "sticky",
           top: 0,
-          zIndex: (theme) => theme.zIndex.appBar,
+          // A number, not `(theme) => theme.zIndex.appBar`: this is a Server
+          // Component and a function can't cross into MUI's client Box.
+          zIndex: 1100,
           bgcolor: "rgba(255,255,255,0.86)",
           backdropFilter: "saturate(1.4) blur(12px)",
           borderBottom: 1,
