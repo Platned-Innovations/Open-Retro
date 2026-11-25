@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, Suspense } from "react";
+import { useState, useTransition, useSyncExternalStore, Suspense } from "react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -163,6 +163,26 @@ function BrandPanel() {
   );
 }
 
+const noopSubscribe = () => () => {};
+
+/**
+ * False on the server and during hydration, true afterwards.
+ *
+ * The sign-in fields are left out of the server HTML on purpose. Password
+ * managers (Keeper, for one) rewrite login inputs as soon as the HTML arrives,
+ * adding attributes and their own elements before React hydrates. React then
+ * sees markup it didn't render and throws a hydration error. Rendering the
+ * fields only on the client means nothing exists for them to modify until
+ * React is in charge.
+ */
+function useHydrated() {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -174,6 +194,7 @@ function LoginForm() {
   const [linkEmail, setLinkEmail] = useState("");
   const [linkSent, setLinkSent] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const hydrated = useHydrated();
 
   async function handlePasswordSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -226,7 +247,10 @@ function LoginForm() {
             <Tab label="Super Admin" value="password" />
           </Tabs>
 
-          {tab === "link" ? (
+          {!hydrated ? (
+            // Same height as the email-link form, so nothing jumps when it appears.
+            <Box aria-hidden sx={{ minHeight: 158 }} />
+          ) : tab === "link" ? (
             linkSent ? (
               <Stack
                 spacing={1.5}
