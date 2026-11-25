@@ -1,5 +1,7 @@
 import "dotenv/config";
 import { createServer } from "http";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { join } from "path";
 import next from "next";
 import { Server as SocketIOServer } from "socket.io";
 import { getToken } from "next-auth/jwt";
@@ -29,6 +31,41 @@ if (!dev) {
     process.exit(1);
   }
 }
+
+/**
+ * Drop pages a previous build left in Next's on-disk route cache.
+ *
+ * Next writes rendered pages to `.next/server/route-cache/` at runtime, keyed
+ * only by a hash of the route ("/login/page"), with nothing tying an entry to
+ * the build that wrote it. A deploy that copies a new `.next` over the old one
+ * without deleting anything (Azure's Zip Deploy does exactly that) leaves
+ * those entries in place, and the new build serves them as cache hits: the
+ * old login page, linking the old build's CSS, indefinitely.
+ *
+ * The cache is stamped with the BUILD_ID that filled it; a different build
+ * clears it once on startup. Failures are logged, not fatal — a read-only
+ * mount (WEBSITE_RUN_FROM_PACKAGE) can't hold a stale cache anyway.
+ */
+function clearStaleRouteCache() {
+  const distDir = join(process.cwd(), ".next");
+  const buildIdFile = join(distDir, "BUILD_ID");
+  if (!existsSync(buildIdFile)) return;
+  const routeCache = join(distDir, "server", "route-cache");
+  const stamp = join(routeCache, ".build-id");
+  try {
+    const buildId = readFileSync(buildIdFile, "utf8").trim();
+    const cachedFor = existsSync(stamp) ? readFileSync(stamp, "utf8").trim() : null;
+    if (cachedFor === buildId) return;
+    rmSync(routeCache, { recursive: true, force: true });
+    mkdirSync(routeCache, { recursive: true });
+    writeFileSync(stamp, buildId);
+    console.log(`[startup] cleared route cache left by ${cachedFor ? `build ${cachedFor}` : "an earlier build"}`);
+  } catch (error) {
+    console.warn("[startup] could not check the route cache:", error);
+  }
+}
+
+if (!dev) clearStaleRouteCache();
 
 const secureCookie = (process.env.APP_URL ?? "").startsWith("https://");
 
