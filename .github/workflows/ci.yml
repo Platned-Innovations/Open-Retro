@@ -161,11 +161,25 @@ jobs:
       # was needlessly bloating every deployment against an already-tight disk
       # quota. `.windsurf`/`.claude`/`.agents` are local AI-tool config, not
       # app files; they were only ever in the zip by omission.
+      #
+      # Source maps, TypeScript declarations and markdown are never loaded at
+      # runtime (tsx transpiles .ts without reading .d.ts files), but they are
+      # a large share of node_modules and .next. On a Free (F1) plan /home is
+      # 1 GB, and Kudu stages node_modules.tar.zst alongside the live copy, so
+      # a deploy that overflows it fails part-way with "No space left on
+      # device" — while still being reported as a success, leaving a mix of
+      # old and new files in wwwroot (old prerendered pages, new static
+      # chunks). Keeping the zip small is what keeps the deploy whole. `zip`'s
+      # `*` matches across directories, so each pattern applies at any depth.
       - name: Package built app for deployment
         if: github.ref == 'refs/heads/main'
         run: >
           zip -r deploy.zip . -x '*.git*' '.env' 'deploy.zip'
           '.next/cache/*' '.windsurf/*' '.claude/*' '.agents/*'
+          'tests/*' '*.map' '*.d.ts' '*.d.mts' '*.d.cts' '*.md'
+      - name: Report deployment package size
+        if: github.ref == 'refs/heads/main'
+        run: ls -lh deploy.zip
       - uses: actions/upload-artifact@v4
         if: github.ref == 'refs/heads/main'
         with:
