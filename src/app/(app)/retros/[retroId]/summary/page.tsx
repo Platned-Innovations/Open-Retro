@@ -64,7 +64,7 @@ export default async function RetroSummaryPage({
           <NavLinkButton href={`/retros/${retro.id}`} size="small" startIcon={<ArrowLeft className="h-3.5 w-3.5" />} sx={{ ml: -1 }}>
             Back to board
           </NavLinkButton>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          <Typography variant="h3" component="h1">
             {retro.title}
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -95,7 +95,7 @@ export default async function RetroSummaryPage({
       <Box>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1.5 }}>
           <ListTree className="h-4 w-4" />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6">
             Board recap
           </Typography>
         </Stack>
@@ -130,7 +130,7 @@ export default async function RetroSummaryPage({
                         const authorName = card.authorName ?? "Anonymous";
                         const cardAvatarBg = colorForUser(authorName);
                         return (
-                          <Box key={card.id} sx={{ border: 1, borderColor: "divider", borderLeft: 3, borderLeftColor: column.color, borderRadius: 1, p: 1.5 }}>
+                          <Box key={card.id} sx={{ border: 1, borderColor: "divider", borderLeft: 3, borderLeftColor: column.color, borderRadius: 1.5, p: 1.5 }}>
                             <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
                               {card.content}
                             </Typography>
@@ -175,7 +175,7 @@ export default async function RetroSummaryPage({
 
       {related.length > 0 && (
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>
+          <Typography variant="h6" component="h2" sx={{ mb: 1.5 }}>
             Related content
           </Typography>
           <Grid container spacing={2}>

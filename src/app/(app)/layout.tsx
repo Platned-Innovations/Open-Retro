@@ -1,19 +1,21 @@
 import Image from "next/image";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
 import Box from "@mui/material/Box";
-import Container from "@mui/material/Container";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
-import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
 import { auth } from "@/lib/auth";
 import { SignOutButton } from "@/components/sign-out-button";
-import { NavLinkBox, NavLinkButton } from "@/components/mui/nav-link";
+import { NavLinkBox } from "@/components/mui/nav-link";
+import { HeaderNavLink } from "@/components/header-nav-link";
 import { colorForUser, textColorOn } from "@/lib/userColor";
+import { ds } from "@/lib/design";
 import { ListChecks, ShieldCheck } from "lucide-react";
 import { countMyOpenActionItems } from "@/server/queries/myActions";
 import { version as appVersion } from "../../../package.json";
+
+/** The one content width: header, page and footer all share these edges. */
+const WRAP = { width: "100%", maxWidth: 1440, mx: "auto", px: { xs: 2, sm: 3, md: 5 } } as const;
 
 /**
  * The count is the point: an action item you have to go looking for is one
@@ -23,18 +25,33 @@ async function MyActionsLink() {
   const open = await countMyOpenActionItems();
 
   return (
-    <NavLinkButton href="/my-actions" color="inherit" size="small" startIcon={<ListChecks className="h-4 w-4" />}>
-      <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+    <HeaderNavLink href="/my-actions" icon={<ListChecks />}>
+      <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
         My actions
-        {open > 0 && (
-          <Chip
-            label={open}
-            size="small"
-            sx={{ bgcolor: "warning.main", color: "warning.contrastText", fontWeight: 700 }}
-          />
-        )}
-      </Stack>
-    </NavLinkButton>
+      </Box>
+      {open > 0 && (
+        <Box
+          component="span"
+          aria-label={`${open} open`}
+          sx={{
+            display: "inline-grid",
+            placeItems: "center",
+            minWidth: 20,
+            height: 20,
+            px: 0.75,
+            borderRadius: 999,
+            bgcolor: "secondary.main",
+            color: "secondary.contrastText",
+            fontFamily: ds.fontMono,
+            fontSize: 12,
+            fontWeight: 500,
+            lineHeight: 1,
+          }}
+        >
+          {open}
+        </Box>
+      )}
+    </HeaderNavLink>
   );
 }
 
@@ -46,79 +63,78 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", flexDirection: "column" }}>
-      <AppBar
-        position="static"
-        elevation={0}
+      <Box
+        component="header"
         sx={{
-          bgcolor: "primary.main",
-          color: "primary.contrastText",
-          backgroundImage: "linear-gradient(90deg, #0c2d58 0%, #123e73 100%)",
+          position: "sticky",
+          top: 0,
+          zIndex: (theme) => theme.zIndex.appBar,
+          bgcolor: "rgba(255,255,255,0.86)",
+          backdropFilter: "saturate(1.4) blur(12px)",
+          borderBottom: 1,
+          borderColor: "divider",
         }}
       >
-        <Container maxWidth={false} sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
-          <Toolbar disableGutters sx={{ justifyContent: "space-between" }}>
-            <NavLinkBox
-              href="/"
-              sx={{ display: "flex", alignItems: "center", gap: 1, color: "inherit", textDecoration: "none" }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 34,
-                  height: 34,
-                  borderRadius: "10px",
-                  bgcolor: "rgba(255,255,255,0.14)",
-                }}
-              >
-                <Image src="/logo.png" alt={appName} width={22} height={22} />
-              </Box>
-              <Box sx={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
-                <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
-                  {appName}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.72)" }}>
-                  Powered by Open Retro v{appVersion}
-                </Typography>
-              </Box>
-            </NavLinkBox>
+        <Stack direction="row" sx={{ ...WRAP, height: 64, alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+          <NavLinkBox
+            href="/"
+            aria-label={`${appName} home`}
+            sx={{ display: "flex", alignItems: "center", gap: 1.25, color: "inherit", textDecoration: "none", minWidth: 0 }}
+          >
+            <Image src="/logo.png" alt="" width={28} height={28} priority />
+            <Typography component="span" sx={{ fontSize: 17, fontWeight: 500, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+              {appName}
+            </Typography>
+          </NavLinkBox>
 
-            <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
-              {user && <MyActionsLink />}
-              {user?.role === "SUPER_ADMIN" && (
-                <NavLinkButton
-                  href="/admin"
-                  color="inherit"
-                  size="small"
-                  startIcon={<ShieldCheck className="h-4 w-4" />}
-                >
+          <Stack direction="row" spacing={{ xs: 0.25, sm: 0.5 }} sx={{ alignItems: "center", minWidth: 0 }}>
+            {user && <MyActionsLink />}
+            {user?.role === "SUPER_ADMIN" && (
+              <HeaderNavLink href="/admin" icon={<ShieldCheck />}>
+                <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
                   Admin
-                </NavLinkButton>
-              )}
-              {user && userAvatarBg && (
-                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                  <Avatar sx={{ width: 28, height: 28, fontSize: 14, bgcolor: userAvatarBg, color: textColorOn(userAvatarBg) }}>
-                    {(user.name?.[0] ?? "?").toUpperCase()}
-                  </Avatar>
-                  <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)", display: { xs: "none", sm: "inline" } }}>
-                    {user.name}
-                  </Typography>
-                </Stack>
-              )}
-              <SignOutButton />
-            </Stack>
-          </Toolbar>
-        </Container>
-      </AppBar>
+                </Box>
+              </HeaderNavLink>
+            )}
+            {user && (
+              <Divider orientation="vertical" flexItem sx={{ mx: { xs: 0.5, sm: 1.5 }, my: 2.25 }} />
+            )}
+            {user && userAvatarBg && (
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center", pr: { xs: 0, sm: 0.5 } }}>
+                <Avatar sx={{ width: 28, height: 28, fontSize: 13, bgcolor: userAvatarBg, color: textColorOn(userAvatarBg) }}>
+                  {(user.name?.[0] ?? "?").toUpperCase()}
+                </Avatar>
+                <Typography variant="body2" sx={{ fontWeight: 500, display: { xs: "none", md: "inline" }, whiteSpace: "nowrap" }}>
+                  {user.name}
+                </Typography>
+              </Stack>
+            )}
+            <SignOutButton />
+          </Stack>
+        </Stack>
+      </Box>
 
-      <Container
+      <Box
         component="main"
-        maxWidth={false}
-        sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", px: { xs: 2, sm: 3, md: 4 }, py: 4 }}
+        id="main"
+        sx={{ ...WRAP, flex: 1, minWidth: 0, display: "flex", flexDirection: "column", pt: { xs: 3, md: 5 }, pb: { xs: 6, md: 8 } }}
       >
         {children}
-      </Container>
+      </Box>
+
+      <Box component="footer" sx={{ borderTop: 1, borderColor: "divider" }}>
+        <Stack
+          direction="row"
+          sx={{ ...WRAP, py: 2.5, justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: "wrap" }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            {appName}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontFamily: ds.fontMono }}>
+            Open Retro v{appVersion}
+          </Typography>
+        </Stack>
+      </Box>
     </Box>
   );
 }

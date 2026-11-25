@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Stack from "@mui/material/Stack";
 import CircularProgress from "@mui/material/CircularProgress";
 import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
 
 function VerifyInner() {
   const router = useRouter();
@@ -34,12 +35,15 @@ function VerifyInner() {
   if (status === "error") {
     return (
       <Stack spacing={1} sx={{ minHeight: "80vh", alignItems: "center", justifyContent: "center", p: 2, textAlign: "center" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+        <Typography variant="h5" component="h1">
           This link is invalid or has expired.
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: "48ch" }}>
           Login links are single-use and expire after 12 hours. Request a new one from the sign-in page.
         </Typography>
+        <Button href="/login" variant="contained" size="large" sx={{ mt: "24px !important" }}>
+          Request a new link
+        </Button>
       </Stack>
     );
   }

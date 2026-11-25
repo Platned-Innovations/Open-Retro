@@ -7,7 +7,7 @@ export default function AppNotFound() {
   return (
     <Stack spacing={1.5} sx={{ minHeight: "60vh", alignItems: "center", justifyContent: "center", px: 2, textAlign: "center" }}>
       <SearchX className="h-10 w-10" style={{ opacity: 0.5 }} />
-      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+      <Typography variant="h6">
         This doesn&apos;t exist anymore
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>

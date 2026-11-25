@@ -5,7 +5,7 @@ import Breadcrumbs from "@mui/material/Breadcrumbs";
 import MuiLink from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
-import HomeIcon from "@mui/icons-material/Home";
+import HomeIcon from "@mui/icons-material/HomeOutlined";
 
 type Crumb = { label: string; href?: string };
 
@@ -19,10 +19,10 @@ type Crumb = { label: string; href?: string };
  */
 export function BreadcrumbNav({ items }: { items: Crumb[] }) {
   return (
-    <Breadcrumbs separator="›" sx={{ fontSize: "body2.fontSize" }}>
+    <Breadcrumbs separator="/" sx={{ fontSize: "body2.fontSize" }}>
       <MuiLink component={Link} href="/" color="text.secondary" underline="hover" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-        <Stack direction="row" sx={{ alignItems: "center", gap: 0.5 }}>
-          <HomeIcon sx={{ fontSize: 16 }} />
+        <Stack direction="row" sx={{ alignItems: "center", gap: 0.75 }}>
+          <HomeIcon sx={{ fontSize: 15 }} />
           Dashboard
         </Stack>
       </MuiLink>

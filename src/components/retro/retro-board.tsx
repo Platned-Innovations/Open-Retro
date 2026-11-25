@@ -221,7 +221,7 @@ export function RetroBoardView({
       <Stack spacing={1.5}>
         <Stack spacing={0.5}>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            <Typography variant="h3" component="h1">
               {retro.title}
             </Typography>
             <Chip label={retro.status} color={STATUS_CHIP_COLOR[retro.status]} size="small" />
