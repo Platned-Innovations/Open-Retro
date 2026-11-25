@@ -35,10 +35,10 @@ function StatTile({
   color: "primary" | "secondary" | "info";
 }) {
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 2, borderTop: 3, borderTopColor: `${color}.main` }}>
-      <Avatar sx={{ bgcolor: `${color}.main`, width: 44, height: 44 }}>{icon}</Avatar>
+    <Paper variant="outlined" sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 2, borderRadius: 2.5 }}>
+      <Avatar variant="rounded" sx={{ bgcolor: "var(--p-surface)", color: `${color}.main`, width: 44, height: 44 }}>{icon}</Avatar>
       <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
+        <Typography variant="h4" sx={{ lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
           {value}
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -64,7 +64,7 @@ export default async function AdminPage({
   return (
     <Stack spacing={4}>
       <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+        <Typography variant="h3" component="h1">
           Platform admin
         </Typography>
         <Typography variant="body1" color="text.secondary">
@@ -91,7 +91,7 @@ export default async function AdminPage({
 
       <Stack spacing={2}>
         <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6">
             Users
           </Typography>
           <AdminFilters companies={filterOptions} />

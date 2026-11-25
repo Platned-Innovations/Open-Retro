@@ -16,7 +16,7 @@ export function HiddenCardsNotice({ count }: { count: number }) {
     <Stack
       direction="row"
       spacing={0.75}
-      sx={{ alignItems: "center", justifyContent: "center", border: 1, borderStyle: "dashed", borderColor: "divider", borderRadius: 2, px: 1.5, py: 2 }}
+      sx={{ alignItems: "center", justifyContent: "center", border: 1, borderStyle: "dashed", borderColor: "divider", borderRadius: 1.5, px: 1.5, py: 2 }}
     >
       <EyeOff className="h-3.5 w-3.5" style={{ flexShrink: 0 }} />
       <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center" }}>

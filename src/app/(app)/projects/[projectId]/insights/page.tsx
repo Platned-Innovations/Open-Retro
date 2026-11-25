@@ -29,8 +29,8 @@ import { HEALTH_DIMENSION_LABELS, HEALTH_SCALE_MAX, MIN_SUBMISSIONS_FOR_AVERAGE,
 function StatTile({ label, value, tone }: { label: string; value: string | number; tone?: "positive" | "warning" | "neutral" }) {
   const color = tone === "positive" ? "success.main" : tone === "warning" ? "warning.main" : "text.primary";
   return (
-    <Paper variant="outlined" sx={{ p: 2.5 }}>
-      <Typography variant="h4" sx={{ fontWeight: 700, color }}>
+    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2.5 }}>
+      <Typography variant="h4" sx={{ color, fontVariantNumeric: "tabular-nums" }}>
         {value}
       </Typography>
       <Typography variant="body2" color="text.secondary">
@@ -83,7 +83,7 @@ export default async function ProjectInsightsPage({
       <Stack spacing={4}>
         <BreadcrumbNav items={breadcrumb} />
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          <Typography variant="h3" component="h1">
             Insights
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -125,7 +125,7 @@ export default async function ProjectInsightsPage({
 
       <Stack direction="row" sx={{ alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          <Typography variant="h3" component="h1">
             Insights
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -210,7 +210,7 @@ export default async function ProjectInsightsPage({
                         pointerEvents: "none",
                       }}
                     >
-                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      <Typography variant="h6">
                         {completionLabel}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -309,7 +309,7 @@ export default async function ProjectInsightsPage({
         <Box>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1.5 }}>
             <FavoriteBorderIcon fontSize="small" />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Typography variant="h6">
               Team health
             </Typography>
           </Stack>
@@ -369,7 +369,7 @@ export default async function ProjectInsightsPage({
       <Box>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1.5 }}>
           <AccountTreeIcon fontSize="small" />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6">
             Recurring themes
           </Typography>
         </Stack>

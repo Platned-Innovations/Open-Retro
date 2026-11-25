@@ -66,7 +66,7 @@ export default async function ProjectPage({
 
       <Stack direction="row" sx={{ alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          <Typography variant="h3" component="h1">
             {project.name}
           </Typography>
           {project.description && (
@@ -104,7 +104,7 @@ export default async function ProjectPage({
 
       <Grid container spacing={4}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>
+          <Typography variant="h6" component="h2" sx={{ mb: 1.5 }}>
             Retrospectives
           </Typography>
           {project.retroTotal === 0 ? (
@@ -157,7 +157,7 @@ export default async function ProjectPage({
         </Grid>
 
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>
+          <Typography variant="h6" component="h2" sx={{ mb: 1.5 }}>
             Members
           </Typography>
           <MembersPanel

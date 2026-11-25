@@ -67,7 +67,7 @@ export default async function MyActionsPage({
   return (
     <Stack spacing={4}>
       <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+        <Typography variant="h3" component="h1">
           My action items
         </Typography>
         <Typography variant="body1" color="text.secondary">

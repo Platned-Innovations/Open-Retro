@@ -10,7 +10,8 @@ import { Toaster } from "@/components/ui/sonner";
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AppRouterCacheProvider>
-      <ThemeProvider theme={theme}>
+      {/* "system" until someone picks: follows the OS, and keeps following it. */}
+      <ThemeProvider theme={theme} defaultMode="system" disableTransitionOnChange>
         <CssBaseline />
         <SessionProvider>
           {children}

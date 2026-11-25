@@ -167,12 +167,20 @@ export function RetroCardItem({
         flexDirection: "column",
         gap: 1,
         p: 1.5,
+        borderRadius: 1.5,
+        bgcolor: "background.paper",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
         opacity: isDragging ? 0.5 : 1,
         transform: CSS.Transform.toString(transform),
-        transition: transition ?? undefined,
+        transition: transition ?? "border-color 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms cubic-bezier(.2,.8,.2,1)",
+        "&:hover": { borderColor: "var(--p-line-strong)" },
         // Everyone's board marks the same card, so "the one we're on" is never
-        // ambiguous mid-discussion.
-        ...(isUnderDiscussion && { borderColor: "primary.main", borderWidth: 2, boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.light}` }),
+        // ambiguous mid-discussion: an ink edge with the one accent around it.
+        ...(isUnderDiscussion && {
+          borderColor: "primary.main",
+          "&:hover": { borderColor: "primary.main" },
+          boxShadow: "0 0 0 4px var(--p-focus-ring)",
+        }),
       }}
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>

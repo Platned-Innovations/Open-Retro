@@ -66,10 +66,14 @@ export function RetroColumn({
         <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: column.color, flexShrink: 0 }} />
         {/* h2, not h3: the retro title is the page's h1 and there is nothing
             between, so h3 skipped a level and broke heading navigation. */}
-        <Typography component="h2" variant="body2" sx={{ fontWeight: 600 }}>
+        <Typography component="h2" variant="subtitle1" sx={{ letterSpacing: "-0.01em" }}>
           {column.title}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontFamily: "var(--font-chivo-mono), ui-monospace, monospace", ml: "auto !important" }}
+        >
           {topLevelCards.length}
         </Typography>
       </Stack>
@@ -81,13 +85,16 @@ export function RetroColumn({
           minHeight: 96,
           flex: 1,
           flexDirection: "column",
-          gap: 1.5,
-          borderRadius: 3,
+          gap: 1.25,
+          borderRadius: 2.5,
           border: 1,
-          borderStyle: "dashed",
-          borderColor: isOver ? column.color : alpha(column.color, 0.35),
-          bgcolor: isOver ? alpha(column.color, 0.12) : alpha(column.color, 0.05),
-          p: 1.5,
+          borderStyle: isOver ? "dashed" : "solid",
+          borderColor: isOver ? column.color : "divider",
+          bgcolor: isOver ? alpha(column.color, 0.1) : "var(--p-surface)",
+          boxShadow: `inset 0 3px 0 ${alpha(column.color, 0.9)}`,
+          transition: "background-color 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms cubic-bezier(.2,.8,.2,1)",
+          p: 1.25,
+          pt: 1.75,
         }}
       >
         <SortableContext items={topLevelCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
