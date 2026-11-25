@@ -201,3 +201,8 @@ jobs:
           app-name: ${{ vars.AZURE_APP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: deploy.zip
+          # Delete what the package doesn't contain. Kudu's default copies over
+          # wwwroot and removes nothing, so every build's chunks piled up on a
+          # 1 GB disk, and Next's runtime route cache from the previous build
+          # survived to serve old pages (server.ts also guards against that).
+          clean: true
