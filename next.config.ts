@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
     // thing standing in the way of a read-only deployment.
     unoptimized: true,
   },
+  experimental: {
+    agentUpgrade: "security",
+  },
 };
 
 export default nextConfig;
